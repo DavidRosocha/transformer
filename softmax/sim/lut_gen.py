@@ -47,7 +47,7 @@ MAX_SIGMA       = 60         # max expected Σe^x for NLP tasks (paper finding)
 SEQ_LEN         = 256
 MAX_SIGMA_OURS  = SEQ_LEN    # conservative upper bound for 256 tokens
 
-OUTPUT_DIR      = "."
+OUTPUT_DIR      = "softmax/sim/luts"  # where to save .mem files
 
 # ─────────────────────────────────────────────
 # Helper utilities
@@ -60,7 +60,7 @@ def to_hex8(val):
 
 def write_mem_1d(filename, data, comment=""):
     """Write a 1D list as a Verilog .mem file (one hex value per line)."""
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         if comment:
             f.write(f"// {comment}\n")
         f.write(f"// {len(data)} entries, uint8 (2 hex digits each)\n")
@@ -78,7 +78,7 @@ def write_mem_2d(filename, data, comment=""):
     """
     rows = len(data)
     cols = len(data[0]) if rows > 0 else 0
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         if comment:
             f.write(f"// {comment}\n")
         f.write(f"// {rows} rows × {cols} cols = {rows*cols} entries, uint8\n")

@@ -28,12 +28,12 @@
 `timescale 1ns / 1ps
 
 package softmax_pkg;
-    parameter int SEQ_LEN    = 256;   // number of tokens (scores per row)
+    parameter int SEQ_LEN    = 16;    // 16 row tokens (row-level tokenization)
     parameter int DATA_WIDTH = 16;    // Q8.8 signed input
     parameter int OUT_WIDTH  = 8;     // uint8 output
     parameter int EX_BITS    = 4;     // MSB bits of e^xi used as LUT column index
-    parameter int SIGMA_BITS = 4;     // MSB bits of Σe^x used as LUT row index
-    parameter int LUT_EX_DEPTH   = 256;          // 1D exp LUT entries
+    parameter int SIGMA_BITS = 4;     // MSB bits of sigma used as LUT row index
+    parameter int LUT_EX_DEPTH   = 256;           // 1D exp LUT entries
     parameter int LUT_2D_ROWS    = 2**SIGMA_BITS; // 16
     parameter int LUT_2D_COLS    = 2**EX_BITS;    // 16
 endpackage
@@ -117,9 +117,9 @@ module softmax_unit
 // Stage 4 register — accumulated sigma
 // =============================================================================
 
-    // Σe^xi: each e^xi is uint8 (0..255), SEQ_LEN=256 values
-    // Maximum sum = 255 * 256 = 65280 → needs 17 bits
-    logic [16:0] sigma;
+    // Sigma: each e^xi is uint8 (0..255), SEQ_LEN=16 values
+    // Maximum sum = 255 * 16 = 4080 -> needs 12 bits
+    logic [11:0] sigma;
 
 // =============================================================================
 // Stage 1: LOAD — receive values and track running max
@@ -200,15 +200,15 @@ module softmax_unit
 // Stage 5: OUTPUT — 2D LUT lookup and stream out
 // =============================================================================
 
-    // Sigma index: take top SIGMA_BITS of sigma
-    // sigma max = 255*256 = 65280 → 17 bits
-    // Top 4 bits = sigma[16:13]
+    # Sigma index: take top SIGMA_BITS of sigma
+    # sigma max = 255 * 16 = 4080 -> 12 bits
+    # Top 4 bits = sigma[11:8]
     logic [SIGMA_BITS-1:0] sigma_idx;
     logic [EX_BITS-1:0]    ex_idx;
 
     always_comb begin
-        // Top 4 bits of sigma (17-bit value)
-        sigma_idx = sigma[16:13];
+        // Top 4 bits of sigma (12-bit value for SEQ_LEN=16)
+        sigma_idx = sigma[11:8];
         // Top 4 bits of ex_buf for current output position
         ex_idx    = ex_buf[cnt][7:4];
     end

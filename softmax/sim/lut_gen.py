@@ -38,16 +38,15 @@ SCALE           = (2**PRECISION_BITS) - 1   # 255
 
 # 2D LUT parameters (paper Section 4.2)
 SCALE_EX        = 0.1        # step size for e^x axis  → 11 columns (0..10 * 0.1)
-SCALE_SIGMA     = 1.0        # step size for Σe^x axis → 60 rows
+SCALE_SIGMA     = 1.0        # step size for Σe^x axis
 MAX_SIGMA       = 60         # max expected Σe^x for NLP tasks (paper finding)
 
-# For our 256-token sequence, Σe^x can be larger than 60 in the worst case.
-# Each e^x ∈ (0,1], so Σe^x ∈ (0, SEQ_LEN].
-# With 256 tokens, worst case Σ = 256. We extend the table accordingly.
-SEQ_LEN         = 256
-MAX_SIGMA_OURS  = SEQ_LEN    # conservative upper bound for 256 tokens
+# Row-level tokenization: 16 tokens (one per row of 16 pixels)
+# Each e^x is in (0,1], so Σe^x is in (0, SEQ_LEN] = (0, 16]
+SEQ_LEN         = 16
+MAX_SIGMA_OURS  = SEQ_LEN    # conservative upper bound for 16 tokens
 
-OUTPUT_DIR      = "softmax/sim/luts"  # where to save .mem files
+OUTPUT_DIR      = "softmax/sim/luts"
 
 # ─────────────────────────────────────────────
 # Helper utilities
@@ -81,8 +80,8 @@ def write_mem_2d(filename, data, comment=""):
     with open(filename, "w", encoding="utf-8") as f:
         if comment:
             f.write(f"// {comment}\n")
-        f.write(f"// {rows} rows × {cols} cols = {rows*cols} entries, uint8\n")
-        f.write(f"// Row = Σe^x bin (j), Col = e^xi bin (i)\n")
+        f.write(f"// {rows} rows x {cols} cols = {rows*cols} entries, uint8\n")
+        f.write(f"// Row = sigma bin (j), Col = e^xi bin (i)\n")
         f.write(f"// Access: lut_sigma[j][i]\n")
         for j, row in enumerate(data):
             f.write(f"// row j={j}  (Σe^x ≈ {(j+1)*SCALE_SIGMA:.1f})\n")

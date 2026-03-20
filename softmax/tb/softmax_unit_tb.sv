@@ -1,15 +1,17 @@
-// =============================================================================
-// softmax_unit_tb.sv  v7 — rst_n explicitly driven low at t=0
-// =============================================================================
 `timescale 1ns / 1ps
 
 module softmax_unit_tb;
 
     import softmax_pkg::*;
 
-    logic clk   = 0;
-    logic rst_n = 0;
-    always #5 clk = ~clk;   // 100 MHz
+    // Clock - no inline initialiser
+    logic clk;
+    initial clk = 1'b0;
+    always #5 clk = ~clk;
+
+    // Reset - driven ONLY from initial block
+    // Use reg not logic to guarantee procedural drive in xsim
+    reg rst_n;
 
     logic                         in_valid;
     logic                         in_first;
@@ -29,7 +31,6 @@ module softmax_unit_tb;
         .busy     (busy)
     );
 
-    // Output buffer
     logic [OUT_WIDTH-1:0] out_buf [0:SEQ_LEN-1];
     int capture_idx;
 
@@ -156,22 +157,24 @@ module softmax_unit_tb;
     endtask
 
     initial begin
-        // Drive all signals explicitly at t=0 — do NOT rely on inline initialisers
-        // rst_n MUST be driven low before any clock edge for reset to work
+        // Force rst_n low using reg - guaranteed in xsim
         rst_n       = 1'b0;
         in_valid    = 1'b0;
         in_first    = 1'b0;
         in_data     = '0;
         capture_idx = 0;
 
-        $dumpfile("C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/sim/softmax_sim.vcd");
-        $dumpvars(0, softmax_unit_tb);
+        // Wait for 8 full clock cycles with rst_n low
+        repeat(8) @(posedge clk);
 
-        // Hold reset low for 40ns (4 clock cycles at 100MHz)
-        #40;
+        // Release reset
+        @(negedge clk);
         rst_n = 1'b1;
-        // Wait for reset to propagate
-        #20;
+
+        // Wait 4 more cycles after reset release
+        repeat(4) @(posedge clk);
+
+        $display("-- Reset complete, starting tests --");
 
         test_uniform();
         test_one_hot();

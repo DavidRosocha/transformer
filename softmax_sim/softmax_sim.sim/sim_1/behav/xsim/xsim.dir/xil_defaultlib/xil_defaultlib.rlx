@@ -2,6 +2,6 @@
 2020.2
 Nov 14 2025
 19:37:27
-C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/rtl/softmax_unit.sv,1773954684,systemVerilog,C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/tb/softmax_unit_tb.sv,C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/tb/softmax_unit_tb.sv,,softmax_pkg;softmax_unit,,uvm,../../../../../../../../../../../AMDDesignTools/2025.2/Vivado/data/rsb/busdef,,,,,
-C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/tb/softmax_unit_tb.sv,1773967083,systemVerilog,,,,softmax_unit_tb,,uvm,../../../../../../../../../../../AMDDesignTools/2025.2/Vivado/data/rsb/busdef,,,,,
+C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/rtl/softmax_unit.sv,1773968362,systemVerilog,C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/tb/softmax_unit_tb.sv,C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/tb/softmax_unit_tb.sv,,softmax_pkg;softmax_unit,,uvm,../../../../../../../../../../../AMDDesignTools/2025.2/Vivado/data/rsb/busdef,,,,,
+C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/tb/softmax_unit_tb.sv,1773967830,systemVerilog,,,,softmax_unit_tb,,uvm,../../../../../../../../../../../AMDDesignTools/2025.2/Vivado/data/rsb/busdef,,,,,
 C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax_sim/softmax_sim.sim/sim_1/behav/xsim/glbl.v,1756381829,verilog,,,,glbl,,uvm,,,,,,

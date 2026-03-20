@@ -1,4 +1,4 @@
-Running: xsim.dir/softmax_unit_tb_behav/xsimk.exe -simmode gui -wdb softmax_unit_tb_behav.wdb -simrunnum 0 -socket 54116
+Running: xsim.dir/softmax_unit_tb_behav/xsimk.exe -simmode gui -wdb softmax_unit_tb_behav.wdb -simrunnum 0 -socket 53803
 Design successfully loaded
-Design Loading Memory Usage: 10872 KB (Peak: 10872 KB)
-Design Loading CPU Usage: 15 ms
+Design Loading Memory Usage: 11172 KB (Peak: 11172 KB)
+Design Loading CPU Usage: 77 ms

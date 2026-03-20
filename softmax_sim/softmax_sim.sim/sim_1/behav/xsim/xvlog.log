@@ -1,0 +1,4 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/rtl/softmax_unit.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module softmax_unit
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/tb/softmax_unit_tb.sv" into library xil_defaultlib
+INFO: [VRFC 10-311] analyzing module softmax_unit_tb

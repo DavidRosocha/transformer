@@ -1,15 +1,16 @@
 Time resolution is 1 ps
+-- Reset complete, starting tests --
 
 -- Test 1: uniform (all 0.0) -------------------------
-[softmax] t=75000 -> LOAD
-[softmax] t=225000 -> SUBTRACT
-[softmax] t=385000 -> ACCUMULATE
-[softmax] t=545000 -> OUTPUT
-[softmax] t=705000 -> IDLE
+[softmax] t=135000 -> LOAD
+[softmax] t=285000 -> SUBTRACT
+[softmax] t=445000 -> ACCUMULATE
+[softmax] t=605000 -> OUTPUT
+[softmax] t=765000 -> IDLE
   [uniform] sum=0.0  argmax=0  max_val=0
   [uniform] [0]=x [1]=x [2]=x [3]=x [4]=x [5]=x [6]=x [7]=x [8]=x [9]=x [10]=x [11]=x [12]=x [13]=x [14]=x [15]=x 
   PASS: all outputs equal
 
 -- Test 2: one-hot (token 5 dominant) ----------------
-[softmax] t=765000 -> LOAD
-[softmax] t=915000 -> SUBTRACT
+[softmax] t=825000 -> LOAD
+[softmax] t=975000 -> SUBTRACT

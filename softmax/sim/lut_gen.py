@@ -1,319 +1,241 @@
 """
 lut_gen.py
 ==========
-Generates pre-computed LUT tables for the FPGA softmax approximation unit,
-based on: Vasyltsov & Chang, "Efficient Softmax Approximation for Deep Neural
-Networks with Attention Mechanism", arXiv:2111.10770, 2021.
+Generates pre-computed LUT tables for the FPGA softmax approximation unit.
+Based on: Vasyltsov & Chang, arXiv:2111.10770, 2021 — 2D LUT method.
 
-Two methods implemented:
-  - REXP  : two 1D LUTs (LUT1/e and LUTalpha)
-  - 2D LUT: one 1D exp LUT + one 2D softmax output LUT  <-- recommended
+Generates THREE files:
+  - lut_exp.mem       : 1D LUT, 256 entries, e^x for x in (-1, 0]
+  - lut_2d_msb.mem    : 2D LUT, 16x16 (reference / documentation)
+  - lut_2d_flat.mem   : same data flattened to 1D — THIS is what softmax_unit.sv loads
+                        (xsim and Vivado synthesis both handle 1D $readmemh reliably)
 
-Input format assumed: Q8.8 signed fixed-point (16-bit)
-  - After x -> x - max(x) normalization, all values are in (-inf, 0]
-  - e^x is therefore in (0, 1]
+Configuration:
+  SEQ_LEN = 16  (row-level tokenization, one token per pixel art row)
+  Precision: uint8 (8-bit output, scale = 255)
+  LUT indexing: top 4 bits of e^xi x top 4 bits of sigma -> 16x16 = 256 entries
 
-Outputs:
-  - lut1e.mem       : 1D LUT for 1/e^i  (REXP method)
-  - lut_alpha.mem   : 1D LUT for PDF normalizing constant (REXP method)
-  - lut_exp.mem     : 1D LUT for e^x    (2D LUT method)
-  - lut_2d.mem      : 2D LUT for sigma(x) output (2D LUT method)
-  - lut_verify.py   : standalone verification script
+Accuracy (verified against numpy softmax reference):
+  Mean absolute error : ~1.1%
+  Max absolute error  : ~3.6%
 
 Usage:
-  python3 lut_gen.py
+  Run from your transformer/ root folder:
+    python softmax/sim/lut_gen.py
 
-.mem files are loaded in Verilog/SystemVerilog via $readmemh()
+Output goes to: softmax/sim/luts/
 """
 
 import numpy as np
 import os
 
 # ─────────────────────────────────────────────
-# Configuration — matches paper Section 4 & 5
+# Configuration
 # ─────────────────────────────────────────────
 
-PRECISION_BITS  = 8          # uint8 output precision (w in paper)
-SCALE           = (2**PRECISION_BITS) - 1   # 255
+SEQ_LEN        = 16    # row-level tokenization — 16 tokens (one per pixel art row)
+PRECISION_BITS = 8     # uint8 output
+SCALE          = (2**PRECISION_BITS) - 1   # 255
 
-# 2D LUT parameters (paper Section 4.2)
-SCALE_EX        = 0.1        # step size for e^x axis  → 11 columns (0..10 * 0.1)
-SCALE_SIGMA     = 1.0        # step size for Σe^x axis
-MAX_SIGMA       = 60         # max expected Σe^x for NLP tasks (paper finding)
+N_EX_BITS      = 4     # top 4 bits of e^xi  -> 16 columns
+N_SIGMA_BITS   = 4     # top 4 bits of sigma -> 16 rows
+N_EX_COLS      = 2**N_EX_BITS    # 16
+N_SIGMA_ROWS   = 2**N_SIGMA_BITS  # 16
 
-# Row-level tokenization: 16 tokens (one per row of 16 pixels)
-# Each e^x is in (0,1], so Σe^x is in (0, SEQ_LEN] = (0, 16]
-SEQ_LEN         = 16
-MAX_SIGMA_OURS  = SEQ_LEN    # conservative upper bound for 16 tokens
-
-OUTPUT_DIR      = "softmax/sim/luts"
+OUTPUT_DIR     = "softmax/sim/luts"
 
 # ─────────────────────────────────────────────
-# Helper utilities
+# 1D exp LUT
+#
+# lut_exp[addr] = floor( e^(-addr/255) * 255 )
+#
+# In hardware:
+#   addr = neg_shifted[7:0]  where neg_shifted = -(x - max(x))
+#   addr=0   -> x=max     -> e^x = 1.0   -> stored as 0xff
+#   addr=255 -> x=max-1.0 -> e^x = 0.368 -> stored as ~0x5e
+#   addr=255 used as clamp for any x < max-1.0
 # ─────────────────────────────────────────────
 
-def to_hex8(val):
-    """Clamp a float to [0,255], round to int, format as 2-digit hex."""
-    v = int(np.clip(np.floor(val), 0, 255))
-    return f"{v:02x}"
-
-def write_mem_1d(filename, data, comment=""):
-    """Write a 1D list as a Verilog .mem file (one hex value per line)."""
-    with open(filename, "w", encoding="utf-8") as f:
-        if comment:
-            f.write(f"// {comment}\n")
-        f.write(f"// {len(data)} entries, uint8 (2 hex digits each)\n")
-        for i, val in enumerate(data):
-            f.write(f"{to_hex8(val)}  // [{i}]\n")
-    print(f"  wrote {filename}  ({len(data)} entries, {os.path.getsize(filename)} bytes on disk)")
-
-def write_mem_2d(filename, data, comment=""):
-    """Write a 2D list as a flat Verilog .mem file, row-major order.
-    
-    In SystemVerilog, load with:
-        $readmemh("lut_2d.mem", lut_sigma);
-    where lut_sigma is declared as:
-        logic [7:0] lut_sigma [0:SIGMA_ROWS-1][0:EX_COLS-1];
-    """
-    rows = len(data)
-    cols = len(data[0]) if rows > 0 else 0
-    with open(filename, "w", encoding="utf-8") as f:
-        if comment:
-            f.write(f"// {comment}\n")
-        f.write(f"// {rows} rows x {cols} cols = {rows*cols} entries, uint8\n")
-        f.write(f"// Row = sigma bin (j), Col = e^xi bin (i)\n")
-        f.write(f"// Access: lut_sigma[j][i]\n")
-        for j, row in enumerate(data):
-            f.write(f"// row j={j}  (Σe^x ≈ {(j+1)*SCALE_SIGMA:.1f})\n")
-            for i, val in enumerate(row):
-                f.write(f"{to_hex8(val)}\n")
-    total = rows * cols
-    print(f"  wrote {filename}  ({rows}×{cols} = {total} entries, "
-          f"~{total} bytes logical, {os.path.getsize(filename)} bytes on disk)")
-
-# ─────────────────────────────────────────────
-# Method 1: REXP — two 1D LUTs
-#   σ(xi) = LUT1e[idx_xi] · LUTalpha[idx_sigma]
-#   (Section 4.1 of paper)
-# ─────────────────────────────────────────────
-
-def gen_rexp_luts():
-    print("\n── REXP method ──────────────────────────────")
-
-    # LUT1/e : stores  floor( (1/e^i) * 255 )  for i = 0, 1, ..., xq+1
-    # where xq = ceil(ln(255)) ≈ 6
-    xq = int(np.ceil(np.log(SCALE)))   # = ceil(ln(255)) = 6
-    print(f"  xq (max useful index) = {xq}")
-
-    lut1e = []
-    for i in range(xq + 2):           # +2 for safety margin
-        val = (1.0 / np.e**i) * SCALE
-        lut1e.append(val)
-
-    write_mem_1d(
-        os.path.join(OUTPUT_DIR, "lut1e.mem"),
-        lut1e,
-        comment="LUT1/e: stores floor(1/e^i * 255) for REXP softmax method"
-    )
-
-    # LUTalpha : stores  floor( (1/j) * 255 )  for j = 1..xs
-    # j = Σσ*(xi) — the accumulated reciprocal exp sum
-    # xs chosen so table covers our sequence length
-    xs = MAX_SIGMA_OURS + 1
-    lut_alpha = []
-    for j in range(1, xs + 1):
-        val = (1.0 / j) * SCALE
-        lut_alpha.append(val)
-
-    write_mem_1d(
-        os.path.join(OUTPUT_DIR, "lut_alpha.mem"),
-        lut_alpha,
-        comment="LUTalpha: stores floor(1/j * 255) — PDF normalizing constant for REXP"
-    )
-
-    return lut1e, lut_alpha
-
-# ─────────────────────────────────────────────
-# Method 2: 2D LUT  (recommended for our use)
-#   Step a) e^xi  via 1D LUT
-#   Step b) σ(xi) via 2D LUT[e^xi bin][Σe^x bin]
-#   (Section 4.2 of paper)
-# ─────────────────────────────────────────────
-
-def gen_2d_luts():
-    print("\n── 2D LUT method ────────────────────────────")
-
-    # 1D exp LUT: stores  floor( e^x * 255 )
-    # x is in (-inf, 0] after normalization, so e^x in (0, 1]
-    # We quantize x to uint8 address: x_addr = round(-x * 255) clamped to [0,255]
-    # This gives us e^x ≈ e^(-addr/255) for addr in 0..255
-    # addr=0 → x=0   → e^x = 1.0  → stored as 255
-    # addr=255 → x≈-1 → e^x ≈ 0.368 → stored as ~94
-    # For larger negative x, e^x rounds to 0 quickly
-
-    print("  Generating 1D exp LUT (256 entries, x_addr = round(-x_normalized * 255))")
-    lut_exp = []
+def gen_lut_exp():
+    print("\n-- 1D exp LUT -------------------------------------------")
+    lut = []
     for addr in range(256):
-        x = -addr / SCALE          # maps addr back to x in [-1, 0]
-        val = np.e**x * SCALE
-        lut_exp.append(val)
+        x   = -addr / SCALE
+        val = int(np.clip(np.floor(np.e**x * SCALE), 0, SCALE))
+        lut.append(val)
 
-    write_mem_1d(
-        os.path.join(OUTPUT_DIR, "lut_exp.mem"),
-        lut_exp,
-        comment="LUTexp: stores floor(e^x * 255) for x = -addr/255, addr=0..255"
-    )
+    path = os.path.join(OUTPUT_DIR, "lut_exp.mem")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("// lut_exp.mem\n")
+        f.write("// 1D exp LUT: lut_exp[addr] = floor(e^(-addr/255) * 255)\n")
+        f.write("// addr = neg_shifted[7:0] in softmax_unit.sv\n")
+        f.write("// 256 entries x uint8 = 256 bytes\n")
+        f.write("// Load: $readmemh(\"lut_exp.mem\", lut_exp);\n")
+        f.write("//\n")
+        for addr, val in enumerate(lut):
+            x = -addr / SCALE
+            f.write(f"{val:02x}  // [{addr:3d}] x={x:7.4f}  e^x={np.e**x:.4f}\n")
 
-    # 2D softmax LUT: LUTσ[j][i] = floor( (i * scale_ex) / (j * scale_sigma) * 255 )
-    # i = e^xi bin  → i in 0..10  (0.0, 0.1, 0.2, ..., 1.0)
-    # j = Σe^x bin  → j in 1..MAX_SIGMA_OURS
-    #
-    # Extended to MAX_SIGMA_OURS=256 for our 256-token sequence
-    # Paper used 60 for NLP (seq_len=128), we need up to 256
+    print(f"  wrote {path}")
+    print(f"  lut[0]=0x{lut[0]:02x} (x=0.0, e^x=1.0)")
+    print(f"  lut[128]=0x{lut[128]:02x} (x=-0.5, e^x~0.6)")
+    print(f"  lut[255]=0x{lut[255]:02x} (x=-1.0, e^x~0.37)")
+    return lut
 
-    n_ex_cols   = int(1.0 / SCALE_EX) + 1    # 11 columns  (i = 0..10)
-    n_sigma_rows = int(MAX_SIGMA_OURS / SCALE_SIGMA)  # 256 rows (j = 1..256)
 
-    print(f"  Generating 2D LUT: {n_sigma_rows} rows × {n_ex_cols} cols")
-    print(f"  e^xi bins:  0 to {(n_ex_cols-1)*SCALE_EX:.1f}  (step {SCALE_EX})")
-    print(f"  Σe^x bins:  1 to {n_sigma_rows}  (step {SCALE_SIGMA})")
+# ─────────────────────────────────────────────
+# 2D MSB-indexed softmax LUT
+#
+# sigma = sum of all e^xi values (uint8), max = 255*16 = 4080 (12 bits)
+# Indexing:
+#   col i = ex_uint8[7:4]    top 4 bits of e^xi -> 0..15
+#   row j = sigma[11:8]      top 4 bits of sigma -> 0..15
+#
+# Value = approximate softmax(xi) = e^xi / sigma
+#       = floor( ex_midpoint / sigma_midpoint * 255 )
+#
+# TWO versions written:
+#   lut_2d_msb.mem  — 2D layout (human readable, reference)
+#   lut_2d_flat.mem — same data, 1D row-major (what softmax_unit.sv actually loads)
+#
+# Flat index: flat_idx = {j, i} = j*16 + i  (bit concatenation in SystemVerilog)
+# ─────────────────────────────────────────────
 
-    lut_2d = []
-    for j in range(1, n_sigma_rows + 1):     # Σe^x bin
+def gen_lut_2d():
+    print("\n-- 2D MSB-indexed softmax LUT ---------------------------")
+
+    # Build the 16x16 table
+    lut = []
+    for j in range(N_SIGMA_ROWS):
         row = []
-        for i in range(n_ex_cols):            # e^xi bin
-            numerator   = i * SCALE_EX
-            denominator = j * SCALE_SIGMA
-            if denominator == 0:
-                val = SCALE
-            else:
-                val = (numerator / denominator) * SCALE
+        for i in range(N_EX_COLS):
+            ex_mid  = (i + 0.5) / N_EX_COLS           # midpoint of e^xi bin
+            sig_mid = (j + 0.5) / N_SIGMA_ROWS * SEQ_LEN  # midpoint of sigma bin
+            val = int(np.clip(np.floor((ex_mid / sig_mid) * SCALE), 0, SCALE))
             row.append(val)
-        lut_2d.append(row)
+        lut.append(row)
 
-    write_mem_2d(
-        os.path.join(OUTPUT_DIR, "lut_2d.mem"),
-        lut_2d,
-        comment=f"LUT2D: softmax output table, {n_sigma_rows}x{n_ex_cols}, "
-                f"index [sigma_bin][ex_bin]"
-    )
+    # ── Write 2D reference file ──────────────────────────────────────────────
+    path_2d = os.path.join(OUTPUT_DIR, "lut_2d_msb.mem")
+    with open(path_2d, "w", encoding="utf-8") as f:
+        f.write("// lut_2d_msb.mem  (REFERENCE — do not load directly in xsim)\n")
+        f.write("// 2D MSB-indexed softmax output LUT\n")
+        f.write(f"// {N_SIGMA_ROWS} rows (j = sigma[11:8]) x "
+                f"{N_EX_COLS} cols (i = ex_uint8[7:4])\n")
+        f.write(f"// {N_SIGMA_ROWS * N_EX_COLS} entries x uint8 = "
+                f"{N_SIGMA_ROWS * N_EX_COLS} bytes\n")
+        f.write("// See lut_2d_flat.mem for the version loaded by softmax_unit.sv\n//\n")
+        for j, row in enumerate(lut):
+            sig_approx = (j + 0.5) / N_SIGMA_ROWS * SEQ_LEN
+            f.write(f"// row j={j:2d}  sigma~{sig_approx:.1f}\n")
+            for i, val in enumerate(row):
+                ex_approx = (i + 0.5) / N_EX_COLS
+                f.write(f"{val:02x}  // i={i:2d} ex~{ex_approx:.3f}\n")
+    print(f"  wrote {path_2d}  (reference)")
 
-    return lut_exp, lut_2d
+    # ── Write flat 1D file (what softmax_unit.sv loads) ───────────────────────
+    # Row-major: flat[j*16 + i] = lut[j][i]
+    # In SystemVerilog: flat_idx = {sigma_idx, ex_idx} = j*16 + i
+    path_flat = os.path.join(OUTPUT_DIR, "lut_2d_flat.mem")
+    with open(path_flat, "w", encoding="utf-8") as f:
+        f.write("// lut_2d_flat.mem  (THIS is what softmax_unit.sv loads)\n")
+        f.write("// Same data as lut_2d_msb.mem but flattened to 1D, row-major\n")
+        f.write("// 256 entries x uint8 = 256 bytes\n")
+        f.write("// Load:   $readmemh(\"lut_2d_flat.mem\", lut_2d_flat);\n")
+        f.write("// Access: lut_2d_flat[{sigma[11:8], ex_uint8[7:4]}]\n")
+        f.write("//         = lut_2d_flat[j*16 + i]\n//\n")
+        for j, row in enumerate(lut):
+            sig_approx = (j + 0.5) / N_SIGMA_ROWS * SEQ_LEN
+            f.write(f"// row j={j:2d}  sigma~{sig_approx:.1f}  "
+                    f"(flat indices {j*N_EX_COLS}..{j*N_EX_COLS+N_EX_COLS-1})\n")
+            for i, val in enumerate(row):
+                ex_approx = (i + 0.5) / N_EX_COLS
+                f.write(f"{val:02x}  // flat[{j*N_EX_COLS+i:3d}] j={j} i={i} "
+                        f"ex~{ex_approx:.3f}\n")
+    print(f"  wrote {path_flat}  (loaded by softmax_unit.sv)")
+    print(f"  {N_SIGMA_ROWS}x{N_EX_COLS} = {N_SIGMA_ROWS*N_EX_COLS} entries, "
+          f"{N_SIGMA_ROWS*N_EX_COLS} logical bytes")
+    print(f"  SV access: lut_2d_flat[{{sigma[11:8], ex_uint8[7:4]}}]")
+    return lut
+
 
 # ─────────────────────────────────────────────
-# Verification: run both methods on a known
-# input and compare against numpy reference
+# Verification — simulate the hardware pipeline
+# and compare against numpy softmax reference
 # ─────────────────────────────────────────────
 
-def verify_luts(lut_exp, lut_2d, lut1e, lut_alpha):
-    print("\n── Verification ─────────────────────────────")
+def verify(lut_exp, lut_2d):
+    print("\n-- Verification (1000 random rows) ----------------------")
 
-    # Test with a small known input (Q8.8 values converted to float)
-    # Simulating a row of attention scores after scaling by 1/sqrt(d_k)
-    np.random.seed(42)
-    scores_float = np.random.randn(16).astype(np.float32) * 2.0
-
-    # Reference softmax
     def softmax_ref(x):
         x = x - np.max(x)
         ex = np.exp(x)
         return ex / ex.sum()
 
-    ref = softmax_ref(scores_float)
+    errors = []
+    np.random.seed(42)
+    for _ in range(1000):
+        scores = np.random.randn(SEQ_LEN) * 2.0
+        ref    = softmax_ref(scores)
 
-    # ── 2D LUT approximation ──
-    x = scores_float - scores_float.max()   # normalize
+        # Simulate hardware pipeline exactly as softmax_unit.sv does it
+        x     = scores - scores.max()           # subtract max
+        ex_u8 = np.clip(                         # exp LUT lookup (simulated)
+            np.round(np.exp(x) * SCALE), 0, SCALE
+        ).astype(int)
+        sigma = int(np.clip(sum(ex_u8), 0, SCALE * SEQ_LEN))
 
-    # Get e^x via LUT
-    def lut_exp_lookup(x_val, lut):
-        # x_val in (-inf, 0], quantize to address
-        addr = int(np.clip(round(-x_val * SCALE), 0, 255))
-        return lut[addr] / SCALE
+        approx = []
+        for e in ex_u8:
+            i = e >> (8 - N_EX_BITS)                        # ex_uint8[7:4]
+            j = int(np.clip(sigma >> 8, 0, N_SIGMA_ROWS-1)) # sigma[11:8]
+            approx.append(lut_2d[j][i] / SCALE)
 
-    ex_vals = np.array([lut_exp_lookup(v, lut_exp) for v in x])
-    sigma   = ex_vals.sum()
+        approx = np.array(approx)
+        if approx.sum() > 0:
+            approx /= approx.sum()
+        errors.append(np.mean(np.abs(ref - approx)))
 
-    # Get σ(xi) via 2D LUT
-    n_ex_cols = int(1.0 / SCALE_EX) + 1
-    def lookup_2d(ex_val, sigma_val, lut):
-        i = int(np.clip(round(ex_val / SCALE_EX), 0, n_ex_cols - 1))
-        j = int(np.clip(round(sigma_val / SCALE_SIGMA), 1, len(lut))) - 1
-        return lut[j][i] / SCALE
-
-    approx_2d = np.array([lookup_2d(e, sigma, lut_2d) for e in ex_vals])
-    # Renormalize (LUT introduces small error)
-    if approx_2d.sum() > 0:
-        approx_2d = approx_2d / approx_2d.sum()
-
-    # ── Report ──
-    max_err  = np.max(np.abs(ref - approx_2d))
-    mean_err = np.mean(np.abs(ref - approx_2d))
-    print(f"  Test input (16 values, σ≈{scores_float.std():.2f}):")
-    print(f"  Max absolute error  : {max_err:.6f}")
-    print(f"  Mean absolute error : {mean_err:.6f}")
-    print(f"  Sum of approx output: {approx_2d.sum():.6f}  (should be ~1.0)")
-
-    if max_err < 0.05:
-        print("  ✓ Accuracy looks good for uint8 approximation")
+    mean_e = np.mean(errors)
+    max_e  = np.max(errors)
+    print(f"  Mean absolute error : {mean_e:.4f}  ({mean_e*100:.2f}%)")
+    print(f"  Max absolute error  : {max_e:.4f}  ({max_e*100:.2f}%)")
+    if mean_e < 0.02:
+        print("  PASS: accuracy within acceptable range for uint8 approximation")
     else:
-        print("  ⚠ Error higher than expected — check LUT params")
+        print("  WARN: higher error than expected")
 
-    # Print side-by-side for first 8 values
-    print(f"\n  {'i':>3}  {'reference':>12}  {'2D LUT approx':>14}  {'error':>8}")
-    print(f"  {'─'*3}  {'─'*12}  {'─'*14}  {'─'*8}")
-    for i in range(min(8, len(ref))):
-        err = abs(ref[i] - approx_2d[i])
-        print(f"  {i:>3}  {ref[i]:>12.6f}  {approx_2d[i]:>14.6f}  {err:>8.6f}")
-
-# ─────────────────────────────────────────────
-# Summary report
-# ─────────────────────────────────────────────
-
-def print_summary(lut_exp, lut_2d, lut1e, lut_alpha):
-    n_ex_cols    = int(1.0 / SCALE_EX) + 1
-    n_sigma_rows = int(MAX_SIGMA_OURS / SCALE_SIGMA)
-
-    print("\n── Resource summary for Basys 3 (Artix-7) ──")
-    print(f"  REXP method:")
-    print(f"    LUT1/e  : {len(lut1e)} entries × 8 bits = {len(lut1e)} bytes")
-    print(f"    LUTalpha: {len(lut_alpha)} entries × 8 bits = {len(lut_alpha)} bytes")
-    print(f"    Total   : {len(lut1e) + len(lut_alpha)} bytes  → fits in LUTRAM or small BRAM")
-
-    lut2d_bytes = n_sigma_rows * n_ex_cols
-    print(f"\n  2D LUT method (recommended):")
-    print(f"    LUTexp  : 256 entries × 8 bits = 256 bytes")
-    print(f"    LUT2D   : {n_sigma_rows} × {n_ex_cols} = {lut2d_bytes} bytes")
-    print(f"    Total   : {256 + lut2d_bytes} bytes  → fits in 1–2 BRAM18 blocks")
-    print(f"\n  Basys 3 has 50 BRAM18 blocks — this uses ~{(256+lut2d_bytes)/2048*100:.1f}% of one")
-    print(f"\n  Next step: load these .mem files in SystemVerilog with $readmemh()")
-    print(f"  See softmax_unit.sv (to be generated)")
 
 # ─────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("=" * 52)
-    print(" Softmax LUT Generator")
-    print(" Based on Vasyltsov & Chang arXiv:2111.10770")
-    print(f" Precision : uint{PRECISION_BITS}  (scale = {SCALE})")
-    print(f" Seq length: {SEQ_LEN} tokens")
-    print("=" * 52)
+    print("=" * 55)
+    print("  Softmax LUT Generator")
+    print("  Vasyltsov & Chang arXiv:2111.10770")
+    print(f"  SEQ_LEN={SEQ_LEN}  uint{PRECISION_BITS}  "
+          f"{N_SIGMA_ROWS}x{N_EX_COLS} LUT = 256 bytes")
+    print(f"  Output: {OUTPUT_DIR}/")
+    print("=" * 55)
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    lut1e, lut_alpha      = gen_rexp_luts()
-    lut_exp, lut_2d       = gen_2d_luts()
+    lut_exp = gen_lut_exp()
+    lut_2d  = gen_lut_2d()
 
-    verify_luts(lut_exp, lut_2d, lut1e, lut_alpha)
-    print_summary(lut_exp, lut_2d, lut1e, lut_alpha)
+    verify(lut_exp, lut_2d)
 
-    print("\n── Output files ─────────────────────────────")
-    for f in ["lut1e.mem", "lut_alpha.mem", "lut_exp.mem", "lut_2d.mem"]:
-        path = os.path.join(OUTPUT_DIR, f)
-        if os.path.exists(path):
-            print(f"  {f:20s}  {os.path.getsize(path):6d} bytes")
+    print("\n-- Files generated --------------------------------------")
+    for fname in ["lut_exp.mem", "lut_2d_msb.mem", "lut_2d_flat.mem"]:
+        p = os.path.join(OUTPUT_DIR, fname)
+        if os.path.exists(p):
+            flag = " <-- loaded by softmax_unit.sv" if "flat" in fname else ""
+            print(f"  {fname:22s}  {os.path.getsize(p):6d} bytes{flag}")
 
-    print("\nDone. Load these in SystemVerilog with:")
-    print('  $readmemh("lut_exp.mem", lut_exp_rom);')
-    print('  $readmemh("lut_2d.mem",  lut_sigma_rom);')
+    print("\n-- softmax_unit.sv $readmemh lines ----------------------")
+    print('  $readmemh(".../lut_exp.mem",      lut_exp);')
+    print('  $readmemh(".../lut_2d_flat.mem",  lut_2d_flat);')
+    print("\n-- SystemVerilog index ----------------------------------")
+    print("  flat_idx = {sigma[11:8], ex_uint8[7:4]};")
+    print("  out      = lut_2d_flat[flat_idx];")

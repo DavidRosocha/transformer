@@ -11,26 +11,46 @@ Each is 64×64 × 2 bytes = 8,192 bytes. Total: ~64 KB loaded once.
 module attention_fsm #(
 // Parameters here
 )(
-    input clk
-    input rst
+    input logic clk
+    input logic rst
+
+    input [7:0] serial_rx // pulled from uart_rx
+    input logic valid_rx
+
+
+    output [7:0] serial_tx // sent to uart_tx
 )
 
 // Local Parameters
-// List states
+typedef enum logic[3:0] {
+    IDLE,
+    WAIT_TYPE,
+    STORING_WEIGHTS,
+    STORING_LIVE,
 
-localparam WAITING_FOR_WEIGHTS
-localparam STORING_WEIGHTS
-localparam WAITING_FOR_LIVE
-localparam STORING_LIVE
+    LOADING_MMUL_MATRICES,
+    QKV_MMUL,
+    SCORES_MMUL,
+    SOFTMAX,
+    VALUE_MMUL,
+    WOUT_MMUL,
 
-localparam LOADING_MMUL_MATRICES
-localparam QKV_MMUL
+    SENDING_OUTPUT
+ } state_t;
 
-localparam SCORES_MMUL
-localparam SOFTMAX
-localparam VALUE_MMUL
-localparam WOUT_MMUL
-localPARAM SENDING_OUTPUT
+ state_t state, next_state;
+ 
+// Registers
+
+reg [15:0] base_addr;
+reg [11:0] word_count = 0;
+// The address you actually feed weight_bram.waddr is just base_addr + word_count — combinational, not its own register.
+
+reg [15:0] held_high_byte = 0;
+reg byte_phase = 0; // 0 (expecting first half)
+
+//  UART gives you 8 bits at a time, but each BRAM word is 16 bits. So you can't write on every valid_rx pulse — only on every other one.
+
 
 // Helper functions (if needed)
 
@@ -83,17 +103,152 @@ Here's a summary of the matrix multiplication process:
     Step 7:  output  = context × W_out  →  [16,64] × [64,64] = [16,64]
 ====================================================
 
+    IDLE,
+    STORING_WEIGHTS,
+    STORING_LIVE,
+
+    LOADING_MMUL_MATRICES,
+    QKV_MMUL,
+    SCORES_MMUL,
+    SOFTMAX,
+    VALUE_MMUL,
+    WOUT_MMUL,
+
+    SENDING_OUTPUT
+
 */
 
-always (@*)
-    begin
+// State register
+always_ff @(posedge clk or posedge rst) begin
+    if (rst)
+        state <= IDLE;
+    else
+        state <= next_state;
+end
 
 
-    end
+always_comb  // next state logic
+// Default: stay in the current state
+    next_state = state;
+
+    case (state)
+        IDLE: begin
+            // Wait for the real frame marker before trusting anything after it.
+            // serial_rx holds whatever byte uart_rx last decoded -- it never
+            // clears itself, so we only ever act on it during the single
+            // cycle valid_rx pulses high for a fresh byte.
+            if (valid_rx && serial_rx == 8'hAA)
+                next_state = WAIT_TYPE;
+        end
+
+        WAIT_TYPE: begin
+            // The byte immediately after 0xAA is TYPE. Match on the upper
+            // nibble: 0x1? = weight-load packet (0x10-0x17 defined),
+            // 0x0? = live inference packet (0x01/0x02 defined). Anything
+            // else is a malformed/unsupported TYPE -- resync to IDLE
+            // instead of silently entering a storing state.
+            if (valid_rx) begin
+                if (serial_rx ==? 8'h1?)
+                    next_state = STORING_WEIGHTS;
+                else if (serial_rx ==? 8'h0?)
+                    next_state = STORING_LIVE;
+                else
+                    next_state = IDLE;
+            end
+        end
+
+        STORING_WEIGHTS: begin
+            if (word_count == 12'd4095) // total of 4096 but starting from 0 - 4095
+                    next_state = IDLE;
+        end
+
+        STORING_LIVE: begin
+            if ()
+                next_state = ;
+        end
+
+        LOADING_MMUL_MATRICES: begin
+            if ()
+                next_state = ;
+        end
+
+        QKV_MMUL: begin
+            if ()
+                next_state = ;
+        end
+
+        SCORES_MMUL: begin
+            if ()
+                next_state = ;
+        end
+
+        SOFTMAX: begin
+            if ()
+                next_state = ;
+        end
+
+        VALUE_MMUL: begin
+            if ()
+                next_state = ;
+        end
+
+        WOUT_MMUL: begin
+            if ()
+                next_state = ;
+        end
+
+        SENDING_OUTPUT: begin
+            if ()
+                next_state = ;
+        end
+    
+    endcase
+
+always_comb  // output logic
+// Default: stay in the current state
+
+    case (state)
+        IDLE: begin
+            if (serial_rx ==? 8'h1?) 
+
+        end
+
+        STORING_WEIGHTS: begin
+            if ()
+        end
+
+        STORING_LIVE: begin
+            if ()
+        end
+
+        LOADING_MMUL_MATRICES: begin
+            if ()
+        end
+
+        QKV_MMUL: begin
+            if ()
+        end
+
+        SCORES_MMUL: begin
+            if ()
+        end
+
+        SOFTMAX: begin
+            if ()
+        end
+
+        VALUE_MMUL: begin
+            if ()
+        end
+
+        WOUT_MMUL: begin
+            if ()
+        end
+
+        SENDING_OUTPUT: begin
+            if ()
+        end
+    
+    endcase
 
 
-always (@posedge(clk))
-    begin
-
-
-    end

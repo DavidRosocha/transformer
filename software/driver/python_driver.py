@@ -4,10 +4,25 @@ fpga_driver.py
 UART driver for communicating between the PC and the Basys 3 FPGA.
 
 Protocol summary:
-  PC → FPGA:  [0xAA] [TYPE] [2048 data bytes] [XOR checksum] [0x55]
-  FPGA → PC:  [0xAA] [TYPE] [2048 data bytes] [XOR checksum] [0x55]
-  ACK:        [0x06]
-  NAK:        [0x15]  (FPGA detected checksum error, PC will resend)
+  PC → FPGA:  [0xAA] [TYPE] [N data bytes] [XOR checksum] [0x55]
+  FPGA → PC:  [0xAA] [2048 data bytes] [XOR checksum]
+  ACK:        [0x06]  (weight-load frames only)
+
+The two directions are deliberately asymmetric:
+
+  * The FPGA does NOT verify the checksum or stop byte it receives -- it
+    counts payload bytes and moves on, swallowing the trailing two bytes.
+    They are still sent so the frame stays self-describing on a scope/logic
+    analyser, but they carry no authority. There is no NAK.
+
+  * The FPGA's reply carries no TYPE byte and no stop byte. The PC only ever
+    receives one kind of frame (an attention result), so there is nothing to
+    disambiguate. The PC does verify the checksum it receives.
+
+  * ACK (0x06) is sent for weight-load frames only. Live inference frames are
+    NOT acknowledged -- the result frame is itself the acknowledgement. Do not
+    wait for an ACK after sending an inference packet; the first byte back
+    will be the 0xAA that opens the result frame.
 
 TYPE byte:
   Live inference packets (16x64, 2048-byte payload):
@@ -15,10 +30,11 @@ TYPE byte:
     0x02 = Layer 2 embedding  (FPGA uses W_Q2, W_K2, W_V2)
 
   Weight-load packets (64x64, 8192-byte payload), sent once at startup
-  before any live inference packets. The FPGA must infer payload size
-  from TYPE, not assume a fixed 2048-byte length. A successful ACK of
-  0x17 (W_out2, the last matrix) is the signal for the FPGA to leave
-  weight-loading mode and start accepting live inference packets:
+  before any live inference packets. The FPGA infers payload size from
+  TYPE rather than assuming a fixed 2048-byte length. There is no
+  weight-loading "mode" on the FPGA -- every frame is dispatched purely
+  on its TYPE byte -- but the weights must still all be loaded before the
+  first inference, since nothing else initialises weight BRAM:
     0x10 = W_q1
     0x11 = W_k1
     0x12 = W_v1
@@ -26,7 +42,7 @@ TYPE byte:
     0x14 = W_q2
     0x15 = W_k2
     0x16 = W_v2
-    0x17 = W_out2  (last -- FPGA exits weight-loading mode after ACK)
+    0x17 = W_out2
 
 Data format:
   Live packets:   16x64 = 1024 values  -> 2048 bytes per packet.
@@ -53,9 +69,8 @@ MATRIX_COLS = 64
 DATA_BYTES  = MATRIX_ROWS * MATRIX_COLS * 2   # 2048 bytes (Q8.8 = 2 bytes/value)
 
 START_BYTE  = 0xAA
-STOP_BYTE   = 0x55
-ACK_BYTE    = 0x06
-NAK_BYTE    = 0x15
+STOP_BYTE   = 0x55   # sent by the PC, never received -- the FPGA's reply has no stop byte
+ACK_BYTE    = 0x06   # weight-load frames only; inference frames are not ACKed
 
 LAYER_1     = 0x01
 LAYER_2     = 0x02
@@ -64,9 +79,9 @@ WEIGHT_ROWS = 64
 WEIGHT_COLS = 64
 WEIGHT_DATA_BYTES = WEIGHT_ROWS * WEIGHT_COLS * 2   # 8192 bytes (Q8.8 = 2 bytes/value)
 
-# TYPE bytes for the 8 weight matrices, sent once at startup. Order matters:
-# the FPGA is expected to leave weight-loading mode after ACKing the last
-# one (W_out2, 0x17) and switch to accepting live inference packets.
+# TYPE bytes for the 8 weight matrices, sent once at startup. The low 3 bits are
+# the matrix index the FPGA uses to pick a 4096-word weight BRAM region, so the
+# values matter even though the send order does not.
 WEIGHT_TYPE = {
     'W_q1':   0x10,
     'W_k1':   0x11,
@@ -78,7 +93,6 @@ WEIGHT_TYPE = {
     'W_out2': 0x17,
 }
 WEIGHT_ORDER = ['W_q1', 'W_k1', 'W_v1', 'W_out1', 'W_q2', 'W_k2', 'W_v2', 'W_out2']
-LAST_WEIGHT_TYPE = WEIGHT_TYPE['W_out2']
 
 MAX_RETRIES = 3
 TIMEOUT_SEC = 2.0   # seconds to wait for FPGA response
@@ -222,34 +236,29 @@ class FPGADriver:
 
     # ── Low-level send/receive ──────────────────
 
-    def _send_packet(self, layer: int, matrix: np.ndarray) -> bool:
+    def _send_packet(self, layer: int, matrix: np.ndarray):
         """
-        Send one packet to the FPGA and wait for ACK.
-        Returns True on ACK, False on NAK or timeout.
-        """
-        packet = build_packet(layer, matrix)
-        self.ser.write(packet)
+        Send one live inference packet to the FPGA.
 
-        # Wait for 1-byte ACK or NAK from FPGA
-        response = self.ser.read(1)
-        if not response:
-            print("[FPGA] Timeout waiting for ACK")
-            return False
-        if response[0] == ACK_BYTE:
-            return True
-        elif response[0] == NAK_BYTE:
-            print("[FPGA] NAK received (checksum error on FPGA side)")
-            return False
-        else:
-            print(f"[FPGA] Unexpected response byte: 0x{response[0]:02X}")
-            return False
+        There is no reply to wait for here: the FPGA does not ACK inference
+        frames. It goes straight from the last payload byte into the matmul
+        chain, and the next byte on the wire is the 0xAA that opens the
+        result frame. Reading a byte here would steal that 0xAA and desync
+        the receive. Call _receive_packet() next.
+        """
+        self.ser.write(build_packet(layer, matrix))
 
     def _send_weight_packet(self, type_byte: int, matrix: np.ndarray) -> bool:
         """
         Send one weight matrix packet to the FPGA and wait for ACK.
 
-        Unlike live inference packets, a weight load does not get a
-        result matrix back -- just ACK/NAK for that one matrix.
+        Weight frames are the only ones the FPGA acknowledges, and a weight
+        load gets no result matrix back -- just the one ACK byte.
+
+        Note the ACK is emitted on the final payload byte, before the FPGA
+        has even seen the checksum, and the FPGA does not verify checksums.
+        So an ACK means "8192 bytes were counted in", not "the data is good".
+        Returns True on ACK, False on timeout or any other byte.
         """
         packet = build_packet(type_byte, matrix)
         self.ser.write(packet)
@@ -260,32 +269,28 @@ class FPGADriver:
             return False
         if response[0] == ACK_BYTE:
             return True
-        elif response[0] == NAK_BYTE:
-            print(f"[FPGA] NAK received for weight type 0x{type_byte:02X} "
-                  f"(checksum error on FPGA side)")
-            return False
-        else:
-            print(f"[FPGA] Unexpected response byte: 0x{response[0]:02X}")
-            return False
+        print(f"[FPGA] Unexpected response byte: 0x{response[0]:02X} "
+              f"(weight type 0x{type_byte:02X})")
+        return False
 
     def _receive_packet(self) -> Optional[np.ndarray]:
         """
         Receive a result packet from the FPGA and return it as a float matrix.
 
-        Reads: [0xAA] [TYPE] [2048 bytes] [CHECKSUM] [0x55]
-        Verifies checksum and stop byte before returning.
-        Returns None if anything goes wrong.
+        Reads: [0xAA] [2048 bytes] [CHECKSUM]
+
+        No TYPE byte and no stop byte -- the FPGA only ever sends this one
+        frame shape, so there is nothing to disambiguate and nothing after
+        the checksum. Returns None if anything goes wrong.
+
+        The first read blocks for the FPGA's whole compute time (all seven
+        matmuls plus softmax), so TIMEOUT_SEC has to cover that, not just
+        the wire time.
         """
         # Read start byte
         start = self.ser.read(1)
         if not start or start[0] != START_BYTE:
             print(f"[FPGA] Bad start byte: {start.hex() if start else 'timeout'}")
-            return None
-
-        # Read type byte (logged but the PC doesn't strictly act on it)
-        layer_byte = self.ser.read(1)
-        if not layer_byte:
-            print("[FPGA] Timeout reading type byte")
             return None
 
         # Read the 2048 data bytes
@@ -294,26 +299,18 @@ class FPGADriver:
             print(f"[FPGA] Expected {DATA_BYTES} data bytes, got {len(data)}")
             return None
 
-        # Read checksum and stop byte together
-        trailer = self.ser.read(2)
-        if len(trailer) != 2:
-            print("[FPGA] Timeout reading checksum/stop")
+        # Read the trailing checksum
+        trailer = self.ser.read(1)
+        if len(trailer) != 1:
+            print("[FPGA] Timeout reading checksum")
             return None
 
         received_checksum = trailer[0]
-        stop_byte         = trailer[1]
-
-        # Verify checksum
         expected_checksum = compute_checksum(data)
         if received_checksum != expected_checksum:
             print(f"[FPGA] Checksum mismatch: "
                   f"received 0x{received_checksum:02X}, "
                   f"expected 0x{expected_checksum:02X}")
-            return None
-
-        # Verify stop byte
-        if stop_byte != STOP_BYTE:
-            print(f"[FPGA] Bad stop byte: 0x{stop_byte:02X}")
             return None
 
         return q8_8_to_float(data)
@@ -325,16 +322,17 @@ class FPGADriver:
         Send a matrix to the FPGA and receive the attention result.
         Retries up to MAX_RETRIES times on any failure.
 
-        On each retry the input buffer is flushed first to clear any
-        stale/garbage bytes left over from the failed attempt.
+        The input buffer is flushed before every attempt, not just retries.
+        With no ACK on inference frames there is no handshake to resync on:
+        a single stale byte sitting in the buffer would be mistaken for the
+        result frame's start byte and desync every subsequent read.
         """
         for attempt in range(1, MAX_RETRIES + 1):
             if attempt > 1:
-                print(f"[FPGA] Retry {attempt}/{MAX_RETRIES} -- flushing buffer...")
-                self.ser.reset_input_buffer()
+                print(f"[FPGA] Retry {attempt}/{MAX_RETRIES}...")
 
-            if not self._send_packet(layer, matrix):
-                continue
+            self.ser.reset_input_buffer()
+            self._send_packet(layer, matrix)
 
             result = self._receive_packet()
             if result is not None:

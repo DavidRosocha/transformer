@@ -5,6 +5,20 @@ module attention_fsm (
     output logic        serial_tx    // 1-bit TX line pin (from internal uart_tx)
 );
 
+// ── UART frame format ─────────────────────────────────────────────────────────
+// PC -> FPGA:  [0xAA] [TYPE] [payload] [XOR checksum] [0x55]
+//   The trailing checksum and stop byte are NOT verified here. After a weight
+//   frame they are swallowed in IDLE (a checksum that happens to be 0xAA sends us
+//   to WAIT_TYPE, where the 0x55 matches no type mask and drops us back to IDLE --
+//   so recovery is guaranteed either way). After a live frame they land during the
+//   matmul states, which ignore valid_rx entirely.
+//
+// FPGA -> PC:  [0xAA] [2048 payload bytes] [XOR checksum]
+//   No type byte and no stop byte -- the PC only ever receives one kind of frame.
+//
+// ACK (0x06) is sent once per WEIGHT frame only. Live inference frames are not
+// ACKed: the result frame itself is the acknowledgement. There is no NAK.
+//
 // ── Type byte encoding ────────────────────────────────────────────────────────
 // Upper nibble 0x1X = weight frame; lower 3 bits = matrix index (0-7)
 //   0x10 = W_q1,  0x11 = W_k1,  0x12 = W_v1,  0x13 = W_out1
@@ -47,6 +61,8 @@ reg        byte_phase;
 reg [7:0]  type_reg;
 reg [7:0]  chk;               // TX payload XOR checksum accumulator
 reg        layer;             // 0 = layer-1 weights, 1 = layer-2 weights (from infer type byte)
+reg [9:0]  live_waddr;        // latched input-word index (word_count BEFORE its increment)
+reg        tx_pending;        // send asserted but uart_tx hasn't raised busy yet
 
 // ── Matmul phase: single source of truth for which matmul LOADING sets up ──────
 localparam [2:0] PH_Q      = 3'd0,   // X x W_q  -> Q
@@ -76,6 +92,13 @@ logic        valid_rx;   // uart_rx.valid -- one pulse per received byte
 logic [7:0]  tx_data;    // uart_tx.data  -- byte to transmit (FSM-driven)
 logic        tx_send;    // uart_tx.send  -- pulse to start transmit (FSM-driven)
 logic        tx_busy;    // uart_tx.busy  -- high while transmitting
+
+// uart_tx latches `send` and raises `busy` on the FOLLOWING edge, so for one cycle
+// after we pulse tx_send the TX looks idle while it is already committed. Gating on
+// !tx_busy alone lets a second send fire into that gap, where uart_tx has left IDLE
+// and ignores it -- the byte is silently dropped. tx_pending covers the gap.
+logic        tx_ready;
+assign tx_ready = !tx_busy && !tx_pending;
 
 // ── UART write signals (shared between both BRAMs, only one we high at a time)
 logic        weight_we;
@@ -188,13 +211,20 @@ assign c_wr_offset = k_pass ? {3'b0, c_wr_addr[5:0], c_wr_addr[9:6]}  // transpo
                             : {1'b0, c_wr_addr};                       // row-major
 
 // Write port has three owners: UART live-load, softmax results, matmul results.
-assign inf_waddr_muxed = (state == STORING_LIVE)    ? {3'b0, word_count[9:0]}          // UART: input region
-                       : (state == SOFTMAX_COLLECT) ? (13'h1100 + {sm_row, sm_ocol})    // attn[row][col]
+// The live-load port is selected by inference_we, NOT by state == STORING_LIVE:
+//   - word_count has already incremented by the cycle inference_we is high, so the
+//     address must come from live_waddr (latched pre-increment), not word_count.
+//   - the final word (1023) retires one cycle after the state has moved on to
+//     LOADING_MMUL_MATRICES, so a state-based selector would drop it. inference_we
+//     is only ever set in STORING_LIVE, and the tile controller cannot assert
+//     c_wr_en that early in a matmul, so the two owners can't collide.
+assign inf_waddr_muxed = inference_we               ? {3'b0, live_waddr}                 // UART: input region
+                       : (state == SOFTMAX_COLLECT) ? (13'h1100 + {sm_row, sm_ocol})     // attn[row][col]
                        :                              (c_wr_offset + c_base);            // matmul result (K transposed)
-assign inf_wdata_muxed = (state == STORING_LIVE)    ? wdata
+assign inf_wdata_muxed = inference_we               ? wdata
                        : (state == SOFTMAX_COLLECT) ? {8'b0, out_data}                   // uint8 prob -> Q8.8 fractional
-                       :                              c_wr_data[23:8];                    // Q16.16 -> Q8.8 (right-shift 8)
-assign inf_we_muxed    = (state == STORING_LIVE)    ? inference_we
+                       :                              c_wr_data[23:8];                   // Q16.16 -> Q8.8 (right-shift 8)
+assign inf_we_muxed    = inference_we               ? 1'b1
                        : (state == SOFTMAX_COLLECT) ? out_valid                          // write each result as it streams out
                        :                              c_wr_en;
 
@@ -361,20 +391,22 @@ always_comb begin
         end
 
         INITIALIZE_SEND: begin
-            if (!tx_busy) next_state = SENDING_LIVE;   // 0xAA accepted; word 0 data is ready
+            if (tx_ready) next_state = SENDING_LIVE;   // 0xAA accepted; word 0 data is ready
         end
 
         LOADING_SEND: next_state = SENDING_LIVE;       // address settled -> data valid next state
 
         SENDING_LIVE: begin
-            if (!tx_busy && byte_phase == 1'b1) begin  // low byte is going out now
+            if (tx_ready && byte_phase == 1'b1) begin  // low byte is going out now
                 if (word_count == 13'd1023) next_state = SENDING_CHECKSUM;  // last word
                 else                        next_state = LOADING_SEND;      // fetch next word
             end
         end
 
         SENDING_CHECKSUM: begin
-            if (!tx_busy) next_state = IDLE;
+            // The checksum byte is registered into tx_data/tx_send on this same cycle,
+            // so uart_tx still picks it up after we've dropped back to IDLE.
+            if (tx_ready) next_state = IDLE;
         end
 
         default: next_state = IDLE;
@@ -392,8 +424,10 @@ always_ff @(posedge clk or posedge rst) begin
         type_reg            <= 0;
         chk                 <= 0;
         layer               <= 0;
+        live_waddr          <= 0;
         tx_data             <= 0;
         tx_send             <= 0;
+        tx_pending          <= 0;
         mm_phase            <= PH_Q;
         sm_row              <= 0;
         sm_col              <= 0;
@@ -416,6 +450,10 @@ always_ff @(posedge clk or posedge rst) begin
         weight_we    <= 0;
         inference_we <= 0;
         start_matmul <= 0;
+
+        // busy has risen -> uart_tx has committed to the byte, the send gap is closed.
+        // Overridden below by any state that pulses tx_send this cycle.
+        if (tx_busy) tx_pending <= 0;
 
         case (state)
 
@@ -444,9 +482,10 @@ always_ff @(posedge clk or posedge rst) begin
                         byte_phase <= 0;
                     end
                 end
-                if (valid_rx && byte_phase == 1'b1 && word_count == 13'd4095 && !tx_busy) begin
-                    tx_data <= ACK_BYTE;   // one pulse, on the final low byte, only if TX free
-                    tx_send   <= 1;
+                if (valid_rx && byte_phase == 1'b1 && word_count == 13'd4095 && tx_ready) begin
+                    tx_data    <= ACK_BYTE;   // one pulse, on the final low byte, only if TX free
+                    tx_send    <= 1;
+                    tx_pending <= 1;
                 end
             end
 
@@ -457,6 +496,7 @@ always_ff @(posedge clk or posedge rst) begin
                         byte_phase     <= 1;
                     end else begin
                         wdata        <= {held_high_byte, rx_data};
+                        live_waddr   <= word_count[9:0];   // latch BEFORE the increment below
                         inference_we <= 1;
                         word_count   <= word_count + 1;
                         byte_phase   <= 0;
@@ -562,9 +602,10 @@ always_ff @(posedge clk or posedge rst) begin
             INITIALIZE_SEND: begin
                 // send the 0xAA start byte; word 0's address is already on the read pin
                 // (driven combinationally from word_count = 0)
-                if (!tx_busy) begin
-                    tx_data <= START_BYTE;
-                    tx_send <= 1;
+                if (tx_ready) begin
+                    tx_data    <= START_BYTE;
+                    tx_send    <= 1;
+                    tx_pending <= 1;
                 end
             end
 
@@ -572,15 +613,17 @@ always_ff @(posedge clk or posedge rst) begin
 
             SENDING_LIVE: begin
                 // inf_rdata_a holds output[word_count]; send high byte then low byte
-                if (!tx_busy) begin
+                if (tx_ready) begin
                     if (byte_phase == 0) begin
                         tx_data    <= inf_rdata_a[15:8];        // high byte first
                         tx_send    <= 1;
+                        tx_pending <= 1;
                         chk        <= chk ^ inf_rdata_a[15:8];
                         byte_phase <= 1;
                     end else begin
                         tx_data    <= inf_rdata_a[7:0];         // low byte
                         tx_send    <= 1;
+                        tx_pending <= 1;
                         chk        <= chk ^ inf_rdata_a[7:0];
                         byte_phase <= 0;
                         word_count <= word_count + 1;
@@ -589,9 +632,10 @@ always_ff @(posedge clk or posedge rst) begin
             end
 
             SENDING_CHECKSUM: begin
-                if (!tx_busy) begin
-                    tx_data <= chk;
-                    tx_send <= 1;
+                if (tx_ready) begin
+                    tx_data    <= chk;
+                    tx_send    <= 1;
+                    tx_pending <= 1;
                 end
             end
 

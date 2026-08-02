@@ -399,18 +399,59 @@ class FPGADriver:
         print(f"[FPGA] All 8 weight matrices loaded in {elapsed_ms:.1f} ms")
         return True
 
+    def run_attention_layer(self, layer_num: int, x: np.ndarray) -> Optional[np.ndarray]:
+        """
+        Run ONE attention layer on the FPGA (matmuls + softmax only) and
+        return its raw output.
+
+        Args:
+            layer_num: 1 or 2 -- which set of weights the FPGA should use
+                       (W_q1/W_k1/W_v1/W_out1 vs W_q2/W_k2/W_v2/W_out2).
+            x:         float32 numpy array of shape (16, 64), the input to
+                       this attention layer.
+
+        Returns:
+            float32 numpy array of shape (16, 64) -- the raw attention output
+            (context @ W_out), BEFORE residual/LayerNorm/FFN. The FPGA has no
+            concept of those -- they only exist in the PyTorch model. The
+            caller (pipeline.py) is responsible for applying them between
+            this call and the next layer's call.
+
+            Returns None if communication fails after all retries.
+        """
+        if self.ser is None or not self.ser.is_open:
+            raise RuntimeError("[FPGA] Not connected. Call connect() first.")
+
+        if layer_num not in (1, 2):
+            raise ValueError(f"layer_num must be 1 or 2, got {layer_num}")
+
+        if x.shape != (MATRIX_ROWS, MATRIX_COLS):
+            raise ValueError(
+                f"Expected input shape ({MATRIX_ROWS}, {MATRIX_COLS}), got {x.shape}"
+            )
+
+        layer_byte = LAYER_1 if layer_num == 1 else LAYER_2
+        return self._exchange(layer_byte, x)
+
     def run_inference(self, embedding: np.ndarray) -> Optional[np.ndarray]:
         """
-        Run a full 2-layer attention inference on the FPGA.
+        Raw two-shot hardware smoke test: run Layer 1, then feed its raw
+        output straight into Layer 2 with NO residual/LayerNorm/FFN in
+        between.
+
+        This does NOT reproduce the trained model's math -- TinyTransformer's
+        forward() sandwiches a residual+LayerNorm+FFN+residual+LayerNorm
+        between the two attention layers, and that only exists on the PC
+        side. Real inference must go through pipeline.py, which calls
+        run_attention_layer() once per layer and applies that PC-side math
+        in between. This method only exists to sanity-check that the wire
+        protocol and both weight sets round-trip correctly end to end.
 
         Args:
             embedding: float32 numpy array of shape (16, 64).
-                       The embedded token matrix produced by pixel_completer.py.
 
         Returns:
-            float32 numpy array of shape (16, 64) -- the result after both
-            attention layers have been applied by the FPGA.
-            Returns None if communication fails after all retries.
+            float32 numpy array of shape (16, 64), or None on failure.
         """
         if self.ser is None or not self.ser.is_open:
             raise RuntimeError("[FPGA] Not connected. Call connect() first.")
@@ -424,12 +465,12 @@ class FPGADriver:
         t0 = time.time()
 
         print("[FPGA] Sending Layer 1 embedding...")
-        result_l1 = self._exchange(LAYER_1, embedding)
+        result_l1 = self.run_attention_layer(1, embedding)
         if result_l1 is None:
             return None
 
         print("[FPGA] Sending Layer 2 embedding...")
-        result_l2 = self._exchange(LAYER_2, result_l1)
+        result_l2 = self.run_attention_layer(2, result_l1)
         if result_l2 is None:
             return None
 

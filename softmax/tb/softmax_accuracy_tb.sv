@@ -49,8 +49,12 @@ module softmax_accuracy_tb;
 
     // ── Parameters ───────────────────────────────────────────────────────────
     localparam int    N_ROWS   = 500;
-    localparam string IN_FILE  = "C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/sim/rtl_inputs.txt";
-    localparam string OUT_FILE = "C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/sim/rtl_outputs.txt";
+
+    // Relative to the simulator's working directory, assumed to be verif/sim --
+    // same convention as softmax_unit's LUT_DIR parameter.
+    localparam string SIM_DIR  = "../../softmax/sim";
+    localparam string IN_FILE  = {SIM_DIR, "/rtl_inputs.txt"};
+    localparam string OUT_FILE = {SIM_DIR, "/rtl_outputs.txt"};
 
     // ── Storage ──────────────────────────────────────────────────────────────
     logic signed [DATA_WIDTH-1:0] input_rows  [0:N_ROWS-1][0:SEQ_LEN-1];

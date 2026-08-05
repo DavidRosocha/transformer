@@ -24,7 +24,7 @@ FRAC_BITS = 8
 N_ROWS    = 500
 SEED      = 42
 
-SIM_DIR   = r"C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/sim"
+SIM_DIR   = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILE  = os.path.join(SIM_DIR, "rtl_inputs.txt")
 OUTPUT_FILE = os.path.join(SIM_DIR, "rtl_outputs.txt")
 

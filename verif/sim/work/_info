@@ -1,0 +1,467 @@
+m255
+K4
+z2
+Z0 !s99 nomlopt
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+R0
+!s11f vlog 2025.2 2025.05, May 31 2025
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z1 dC:/Users/david/Desktop/tpu/verif/sim
+vattention_fsm
+2../../hardware/modules/attention_fsm.sv
+Z2 DXx6 sv_std 3 std 0 22 @5XbY]_OacJl=`ToSm<M^0
+Z3 !s110 1785956561
+!i10b 1
+!s100 fj;Y@ge=2?8L<[Y^`n7DE1
+IKKeN86fSOa_CLN^LPR8MS1
+S1
+R1
+Z4 w1785686411
+8../../hardware/modules/attention_fsm.sv
+F../../hardware/modules/attention_fsm.sv
+!i122 437
+L0 1 649
+Z5 VDg1SIo80bB@j0V0VzS_@n1
+Z6 OL;L;2025.2;82
+r1
+!s85 0
+31
+Z7 !s108 1785956561.000000
+!s107 ../../hardware/modules/attention_fsm.sv|
+!s90 -sv|../../hardware/modules/attention_fsm.sv|
+!i113 0
+Z8 o-sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z9 tCvgOpt 0 defaultOptions 1085333592
+vpe
+Z10 2../../hardware/modules/systolic_array_8x8.sv
+R2
+R3
+!i10b 1
+!s100 0dBj5RRP<gWi9JkLD5=S=2
+I>N>>XMX3R__2:E8Fa7[RX2
+S1
+R1
+Z11 w1781134297
+Z12 8../../hardware/modules/systolic_array_8x8.sv
+Z13 F../../hardware/modules/systolic_array_8x8.sv
+!i122 435
+L0 125 37
+R5
+R6
+r1
+!s85 0
+31
+R7
+Z14 !s107 ../../hardware/modules/systolic_array_8x8.sv|
+Z15 !s90 -sv|../../hardware/modules/systolic_array_8x8.sv|
+!i113 0
+R8
+R9
+vscratch_bram
+2../../hardware/modules/scratch_bram.sv
+R2
+R3
+!i10b 1
+!s100 DEU5[W<6011hh7TH;mKm;1
+IA]P4E865Q7OU@l3omB5JP0
+S1
+R1
+R4
+8../../hardware/modules/scratch_bram.sv
+F../../hardware/modules/scratch_bram.sv
+!i122 434
+L0 23 35
+R5
+R6
+r1
+!s85 0
+31
+Z16 !s108 1785956560.000000
+!s107 ../../hardware/modules/scratch_bram.sv|
+!s90 -sv|../../hardware/modules/scratch_bram.sv|
+!i113 0
+R8
+R9
+Xsoftmax_pkg
+Z17 2../../hardware/modules/softmax_unit.sv
+R2
+Z18 !s110 1785956560
+!i10b 1
+!s100 ;MeeYd:j=]KfdFk3?F^R23
+I@87C74<[@3IjdTo=EZh0f0
+S1
+R1
+Z19 w1785943384
+Z20 8../../hardware/modules/softmax_unit.sv
+Z21 F../../hardware/modules/softmax_unit.sv
+!i122 430
+L0 9 0
+V@87C74<[@3IjdTo=EZh0f0
+R6
+r1
+!s85 0
+31
+R16
+Z22 !s107 ../../hardware/modules/softmax_unit.sv|
+Z23 !s90 -sv|../../hardware/modules/softmax_unit.sv|
+!i113 0
+R8
+R9
+Ysoftmax_ref_if
+2../common/softmax_ref_if.sv
+R2
+Z24 !s110 1785956562
+!i10b 1
+!s100 <>[_1E^5cgj5D8P6g5T6>0
+I;8gPWA[?MQZ20Ag?UcF4a2
+S1
+R1
+w1785955518
+8../common/softmax_ref_if.sv
+F../common/softmax_ref_if.sv
+!i122 440
+L0 19 0
+R5
+R6
+r1
+!s85 0
+31
+Z25 !s108 1785956562.000000
+!s107 ../common/softmax_ref_if.sv|
+!s90 -sv|../common/softmax_ref_if.sv|
+!i113 0
+R8
+R9
+vsoftmax_unit
+R17
+R2
+DXx4 work 11 softmax_pkg 0 22 @87C74<[@3IjdTo=EZh0f0
+R18
+!i10b 1
+!s100 T@FPf8gzj><H`>2mB2Y<F3
+I5[_c6Hl@Jj`KVgZH:@6oz1
+S1
+R1
+R19
+R20
+R21
+!i122 430
+L0 68 201
+R5
+R6
+r1
+!s85 0
+31
+R16
+R22
+R23
+!i113 0
+R8
+R9
+vsystolic_array_8x8
+R10
+R2
+R3
+!i10b 1
+!s100 :?IH=ezm^8PK4b^f]gh2n1
+IKaB]<n@`Bgmd[h;_EMJIV3
+S1
+R1
+R11
+R12
+R13
+!i122 435
+L0 1 119
+R5
+R6
+r1
+!s85 0
+31
+R7
+R14
+R15
+!i113 0
+R8
+R9
+Ttb_opt
+!i145 1
+!s11d tpu_pkg C:/Users/david/Desktop/tpu/verif/sim/work 3 uart_if 1 C:/Users/david/Desktop/tpu/verif/sim/work weight_bkdr_if 1 C:/Users/david/Desktop/tpu/verif/sim/work softmax_ref_if 1 C:/Users/david/Desktop/tpu/verif/sim/work 
+!s11d uvm_pkg G:/FPGA/questa_fse/uvm-1.1d 3 uart_if 1 C:/Users/david/Desktop/tpu/verif/sim/work weight_bkdr_if 1 C:/Users/david/Desktop/tpu/verif/sim/work softmax_ref_if 1 C:/Users/david/Desktop/tpu/verif/sim/work 
+!i144 0
+!s110 1785956564
+V710FWDh^fo<P6Z>f9YXIS2
+04 6 4 work tb_top fast 0
+R0
+!s12f OEM100
+!s12b OEM100
+!s124 OEM10U76 
+!s135 nogc
+o+acc
+tCvgOpt 0 defaultOptions 1107585188
+ntb_opt
+OL;O;2025.2;82
+vtb_top
+2../tb/tb_top.sv
+R2
+Z26 DXx6 mtiUvm 7 uvm_pkg 0 22 4IVjm272>mCZ=TVWA:9fV1
+DXx4 work 7 tpu_pkg 0 22 0I<l_lTR;9>a^do6KHA^L3
+!s110 1785956563
+!i10b 1
+!s100 6<4b2`0^S5Gdacf>SE:jC3
+IoLMD8IUDBkBEC2PkP8HBD2
+S1
+R1
+w1785955569
+8../tb/tb_top.sv
+F../tb/tb_top.sv
+!i122 442
+L0 8 38
+R5
+R6
+r1
+!s85 0
+31
+R25
+!s107 ../tb/tb_top.sv|
+!s90 -sv|+incdir+G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src|../tb/tb_top.sv|
+!i113 0
+R8
+!s92 -sv +incdir+G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R9
+vtile_controller
+2../../hardware/modules/tile_controller.sv
+R2
+R3
+!i10b 1
+!s100 1^5M@>@I_=<Q>Ko7SULdi1
+IK6=@5faLVTDDSH>jl`3lf1
+S1
+R1
+w1781134298
+8../../hardware/modules/tile_controller.sv
+F../../hardware/modules/tile_controller.sv
+!i122 436
+L0 15 367
+R5
+R6
+r1
+!s85 0
+31
+R7
+!s107 ../../hardware/modules/tile_controller.sv|
+!s90 -sv|../../hardware/modules/tile_controller.sv|
+!i113 0
+R8
+R9
+Xtpu_pkg
+!i114 1
+2../tpu_pkg.sv
+!s115 softmax_ref_if
+!s115 weight_bkdr_if
+!s115 uart_if
+R2
+R26
+R24
+!i10b 1
+!s100 Pf<M@J3ZX`]SOQKo;eWQY2
+I0I<l_lTR;9>a^do6KHA^L3
+S1
+R1
+w1785956263
+8../tpu_pkg.sv
+F../tpu_pkg.sv
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/uvm_macros.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_version_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_message_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_phase_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_object_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_printer_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_tlm_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/tlm1/uvm_tlm_imps.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_sequence_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_callback_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_reg_defines.svh
+FG:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_deprecated_defines.svh
+F../agents/uart_agent.sv
+F../env/tpu_env.sv
+F../testcases/tpu_base_test.sv
+F../testcases/tc_uart_rx.sv
+F../testcases/tc_weights_loaded.sv
+F../testcases/tc_uart_tx.sv
+F../testcases/tc_mmul_correct.sv
+F../testcases/tc_mmul_random.sv
+F../testcases/tc_attention_full.sv
+F../testcases/tc_attention_full_layer2.sv
+!i122 441
+L0 8 0
+V0I<l_lTR;9>a^do6KHA^L3
+R6
+r1
+!s85 0
+31
+R25
+!s107 ../testcases/tc_attention_full_layer2.sv|../testcases/tc_attention_full.sv|../testcases/tc_mmul_random.sv|../testcases/tc_mmul_correct.sv|../testcases/tc_uart_tx.sv|../testcases/tc_weights_loaded.sv|../testcases/tc_uart_rx.sv|../testcases/tpu_base_test.sv|../env/tpu_env.sv|../agents/uart_agent.sv|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_deprecated_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_reg_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_callback_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_sequence_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/tlm1/uvm_tlm_imps.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_tlm_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_printer_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_object_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_phase_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_message_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/macros/uvm_version_defines.svh|G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/uvm_macros.svh|../tpu_pkg.sv|
+!s90 -sv|+incdir+G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src+../agents+../env+../testcases|../tpu_pkg.sv|
+!i113 0
+R8
+!s92 -sv +incdir+G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src+../agents+../env+../testcases -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R9
+Yuart_if
+2../common/uart_if.sv
+R2
+R3
+!i10b 1
+!s100 ;C3m@RXfE]lkMEFSl@F_[0
+I2`zPDgKo>X0=JBP>EeaZg1
+S1
+R1
+w1785883901
+8../common/uart_if.sv
+F../common/uart_if.sv
+!i122 438
+L0 7 0
+R5
+R6
+r1
+!s85 0
+31
+R7
+!s107 ../common/uart_if.sv|
+!s90 -sv|../common/uart_if.sv|
+!i113 0
+R8
+R9
+vuart_rx
+2../../hardware/modules/uart_rx.v
+R18
+!i10b 1
+!s100 ?`chEU54ZL[]6o]@UGGSO1
+Ie6Q<Ueeza<95f3>beGMZz3
+R1
+w1781134299
+8../../hardware/modules/uart_rx.v
+F../../hardware/modules/uart_rx.v
+!i122 431
+L0 1 66
+R5
+R6
+r1
+!s85 0
+31
+R16
+!s107 ../../hardware/modules/uart_rx.v|
+!s90 ../../hardware/modules/uart_rx.v|
+!i113 0
+Z27 o-L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R9
+vuart_tx
+2../../hardware/modules/uart_tx.v
+R18
+!i10b 1
+!s100 >Rf^;=zfbCQW7ldOP657E3
+IHFVFeDL>MB87ddkRnn7Vc1
+R1
+w1781134300
+8../../hardware/modules/uart_tx.v
+F../../hardware/modules/uart_tx.v
+!i122 432
+L0 1 60
+R5
+R6
+r1
+!s85 0
+31
+R16
+!s107 ../../hardware/modules/uart_tx.v|
+!s90 ../../hardware/modules/uart_tx.v|
+!i113 0
+R27
+R9
+Yweight_bkdr_if
+2../common/weight_bkdr_if.sv
+R2
+R3
+!i10b 1
+!s100 FFW@o6KEa3J2W>GMQJ25g3
+IbGTQ]9@gULQeH>Af>Y=gJ3
+S1
+R1
+w1785953826
+8../common/weight_bkdr_if.sv
+F../common/weight_bkdr_if.sv
+!i122 439
+L0 14 0
+R5
+R6
+r1
+!s85 0
+31
+R7
+!s107 ../common/weight_bkdr_if.sv|
+!s90 -sv|../common/weight_bkdr_if.sv|
+!i113 0
+R8
+R9
+vweight_bram
+2../../hardware/modules/weight_bram.sv
+R2
+R18
+!i10b 1
+!s100 L`25H;6mWO:>zIQ0F`=C]1
+IS@o1nD?Je6]TUS5JRYmi=2
+S1
+R1
+w1783476777
+8../../hardware/modules/weight_bram.sv
+F../../hardware/modules/weight_bram.sv
+!i122 433
+L0 21 39
+R5
+R6
+r1
+!s85 0
+31
+R16
+!s107 ../../hardware/modules/weight_bram.sv|
+!s90 -sv|../../hardware/modules/weight_bram.sv|
+!i113 0
+R8
+R9

@@ -1,0 +1,16 @@
+BEGIN 3:uart_if:fast__2:work
+    tx :  1:tb_top:fast:work
+    rx :  1:tb_top:fast:work
+    rst :  1:tb_top:fast:work
+END 
+BEGIN 3:uart_if:fast:work
+    clk :  1:tpu_pkg:fast:work
+END 
+BEGIN 3:uart_if:fast__1:work
+    clk :  1:tpu_pkg:fast:work
+    rx :  1:tpu_pkg:fast:work
+    tx :  1:tpu_pkg:fast:work
+END 
+BEGIN 1:weight_bram:fast:work
+    mem :  3:weight_bkdr_if:fast__2:work
+END 

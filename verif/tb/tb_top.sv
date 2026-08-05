@@ -14,7 +14,9 @@ module tb_top;
     logic clk = 0;
     always #5 clk = ~clk;
 
-    uart_if intf (clk);
+    uart_if         intf  (clk);
+    weight_bkdr_if  wbkdr ();      // backdoor into dut.weight_ram.mem
+    softmax_ref_if  smref ();      // reference model, reads the same LUT .mem files
 
     attention_fsm dut (
         .clk       (clk),
@@ -35,6 +37,8 @@ module tb_top;
         // "null, *" = visible to every component in the hierarchy under the
         // name "vif". The agent will pull it back out with a matching ::get().
         uvm_config_db #(virtual uart_if)::set(null, "*", "vif", intf);
+        uvm_config_db #(virtual weight_bkdr_if)::set(null, "*", "wbkdr", wbkdr);
+        uvm_config_db #(virtual softmax_ref_if)::set(null, "*", "smref", smref);
         run_test();
     end
 

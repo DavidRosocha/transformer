@@ -67,7 +67,13 @@ endpackage
 // =============================================================================
 module softmax_unit
     import softmax_pkg::*;
-(
+#(
+    // Where the generated LUT .mem files live. $readmemh resolves relative
+    // paths against the simulator's working directory, so this default assumes
+    // you are running from verif/sim. Override it from the instantiating module
+    // if you run from somewhere else (e.g. a Vivado project directory).
+    parameter string LUT_DIR = "../../softmax/sim/luts"
+)(
     input  logic                         clk,
     input  logic                         rst_n,
     input  logic                         in_valid,
@@ -79,14 +85,13 @@ module softmax_unit
 );
 
     // ── LUT memories ─────────────────────────────────────────────────────────
-    // Update these paths to match your local directory, or add the luts/
-    // folder to Vivado's simulation include directories so bare filenames work.
+    // Paths come from the LUT_DIR parameter above, not hardcoded.
     logic [OUT_WIDTH-1:0] lut_exp     [0:LUT_EX_DEPTH-1];
     logic [OUT_WIDTH-1:0] lut_2d_flat [0:LUT_2D_FLAT-1];
 
     initial begin
-        $readmemh("C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/sim/luts/lut_exp.mem",     lut_exp);
-        $readmemh("C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/sim/luts/lut_2d_flat.mem", lut_2d_flat);
+        $readmemh({LUT_DIR, "/lut_exp.mem"},     lut_exp);
+        $readmemh({LUT_DIR, "/lut_2d_flat.mem"}, lut_2d_flat);
         if (lut_exp[0] === 8'hFF)
             $display("[softmax] LUTs loaded OK (lut_exp[0]=0x%02X)", lut_exp[0]);
         else

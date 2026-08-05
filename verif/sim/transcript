@@ -1,0 +1,263 @@
+# do C:/Users/david/AppData/Local/Temp/rg_w.do
+# ** Warning: (vlib-34) Library already exists at "work".
+# Errors: 0, Warnings: 1
+# Questa Altera Starter FPGA Edition-64 vmap 2025.2 Lib Mapping Utility 2025.05 May 31 2025
+# vmap work work 
+# ** Note: (vmap-220) 'modelsim.ini' is used as the ini file.
+# Modifying modelsim.ini
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:40 on Aug 05,2026
+# vlog -sv ../../hardware/modules/softmax_unit.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling package softmax_pkg
+# -- Compiling module softmax_unit
+# -- Importing package softmax_pkg
+# 
+# Top level modules:
+# 	softmax_unit
+# End time: 15:02:40 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:40 on Aug 05,2026
+# vlog ../../hardware/modules/uart_rx.v 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling module uart_rx
+# 
+# Top level modules:
+# 	uart_rx
+# End time: 15:02:40 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:40 on Aug 05,2026
+# vlog ../../hardware/modules/uart_tx.v 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling module uart_tx
+# 
+# Top level modules:
+# 	uart_tx
+# End time: 15:02:40 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:40 on Aug 05,2026
+# vlog -sv ../../hardware/modules/weight_bram.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling module weight_bram
+# 
+# Top level modules:
+# 	weight_bram
+# End time: 15:02:40 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:40 on Aug 05,2026
+# vlog -sv ../../hardware/modules/scratch_bram.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling module scratch_bram
+# 
+# Top level modules:
+# 	scratch_bram
+# End time: 15:02:41 on Aug 05,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:41 on Aug 05,2026
+# vlog -sv ../../hardware/modules/systolic_array_8x8.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling module systolic_array_8x8
+# -- Compiling module pe
+# 
+# Top level modules:
+# 	systolic_array_8x8
+# End time: 15:02:41 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:41 on Aug 05,2026
+# vlog -sv ../../hardware/modules/tile_controller.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling module tile_controller
+# 
+# Top level modules:
+# 	tile_controller
+# End time: 15:02:41 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:41 on Aug 05,2026
+# vlog -sv ../../hardware/modules/attention_fsm.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling module attention_fsm
+# 
+# Top level modules:
+# 	attention_fsm
+# End time: 15:02:41 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:41 on Aug 05,2026
+# vlog -sv ../common/uart_if.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling interface uart_if
+# 
+# Top level modules:
+# 	--none--
+# End time: 15:02:41 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:41 on Aug 05,2026
+# vlog -sv ../common/weight_bkdr_if.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling interface weight_bkdr_if
+# 
+# Top level modules:
+# 	--none--
+# End time: 15:02:41 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:42 on Aug 05,2026
+# vlog -sv ../common/softmax_ref_if.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling interface softmax_ref_if
+# 
+# Top level modules:
+# 	--none--
+# End time: 15:02:42 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:42 on Aug 05,2026
+# vlog -sv "+incdir+G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src+../agents+../env+../testcases" ../tpu_pkg.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling package tpu_pkg
+# -- Importing package mtiUvm.uvm_pkg (uvm-1.1d Built-in)
+# 
+# Top level modules:
+# 	--none--
+# End time: 15:02:42 on Aug 05,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vlog 2025.2 Compiler 2025.05 May 31 2025
+# Start time: 15:02:42 on Aug 05,2026
+# vlog -sv "+incdir+G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src" ../tb/tb_top.sv 
+# ** Note: (vlog-220) 'modelsim.ini' is used as the ini file.
+# -- Compiling module tb_top
+# -- Importing package mtiUvm.uvm_pkg (uvm-1.1d Built-in)
+# -- Importing package tpu_pkg
+# 
+# Top level modules:
+# 	tb_top
+# End time: 15:02:43 on Aug 05,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# Questa Altera Starter FPGA Edition-64 vopt 2025.2 Compiler 2025.05 May 31 2025
+# ** Warning: (vopt-10908) Some optimizations are turned off because the +acc switch is in effect.
+# Start time: 15:02:43 on Aug 05,2026
+# vopt tb_top -o tb_opt "+acc" 
+# ** Note: (vopt-220) 'modelsim.ini' is used as the ini file.
+# 
+# Top level modules:
+# 	tb_top
+# 
+# Analyzing design...
+# -- Loading module tb_top
+# -- Importing package mtiUvm.uvm_pkg (uvm-1.1d Built-in)
+# -- Importing package tpu_pkg
+# -- Loading package mtiUvm.questa_uvm_pkg
+# -- Loading interface uart_if
+# -- Loading interface weight_bkdr_if
+# -- Loading interface softmax_ref_if
+# -- Loading module attention_fsm
+# -- Loading module uart_rx
+# -- Loading module uart_tx
+# -- Loading module weight_bram
+# -- Loading module scratch_bram
+# -- Loading module tile_controller
+# -- Loading module systolic_array_8x8
+# -- Loading module softmax_unit
+# -- Importing package softmax_pkg
+# -- Loading module pe
+# Incremental compilation check found no design-units have changed.
+# Optimized design name is tb_opt
+# End time: 15:02:44 on Aug 05,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 1
+# ** Note: (vsim-220) 'modelsim.ini' is used as the ini file.
+# vsim -L mtiUvm tb_opt "+UVM_TESTNAME=tc_weights_loaded" "+UVM_VERBOSITY=UVM_LOW" 
+# Start time: 15:02:44 on Aug 05,2026
+# //  Questa Altera Starter FPGA Edition-64
+# //  Version 2025.2 win64 May 31 2025
+# //
+# // Unpublished work. Copyright 2025 Siemens
+# //
+# // This material contains trade secrets or otherwise confidential information
+# // owned by Siemens Industry Software Inc. or its affiliates (collectively,
+# // "SISW"), or its licensors. Access to and use of this information is strictly
+# // limited as set forth in the Customer's applicable agreements with SISW.
+# //
+# // This material may not be copied, distributed, or otherwise disclosed outside
+# // of the Customer's facilities without the express written permission of SISW,
+# // and may not be used in any way not expressly authorized by SISW.
+# //
+# Loading sv_std.std
+# Loading work.uart_if(fast)
+# Loading work.weight_bkdr_if(fast)
+# Loading work.softmax_ref_if(fast)
+# Loading mtiUvm.uvm_pkg(fast)
+# Loading work.tpu_pkg(fast)
+# Loading mtiUvm.questa_uvm_pkg(fast)
+# Loading work.tb_top(fast)
+# Loading work.uart_if(fast__2)
+# Loading work.weight_bkdr_if(fast__2)
+# Loading work.softmax_ref_if(fast__2)
+# Loading work.attention_fsm(fast)
+# Loading work.uart_rx(fast)
+# Loading work.uart_tx(fast)
+# Loading work.weight_bram(fast)
+# Loading work.scratch_bram(fast)
+# Loading work.tile_controller(fast)
+# Loading work.systolic_array_8x8(fast)
+# Loading work.pe(fast)
+# Loading work.softmax_pkg(fast)
+# Loading work.softmax_unit(fast)
+# Loading G:/FPGA/questa_fse/uvm-1.1d\win64\uvm_dpi.dll
+# ----------------------------------------------------------------
+# UVM-1.1d
+# (C) 2007-2013 Mentor Graphics Corporation
+# (C) 2007-2013 Cadence Design Systems, Inc.
+# (C) 2006-2013 Synopsys, Inc.
+# (C) 2011-2013 Cypress Semiconductor Corp.
+# ----------------------------------------------------------------
+# 
+#   ***********       IMPORTANT RELEASE NOTES         ************
+# 
+#   You are using a version of the UVM library that has been compiled
+#   with `UVM_NO_DEPRECATED undefined.
+#   See http://www.eda.org/svdb/view.php?id=3313 for more details.
+# 
+#   You are using a version of the UVM library that has been compiled
+#   with `UVM_OBJECT_MUST_HAVE_CONSTRUCTOR undefined.
+#   See http://www.eda.org/svdb/view.php?id=3770 for more details.
+# 
+#       (Specify +UVM_NO_RELNOTES to turn off this notice)
+# 
+# [softmax] LUTs loaded OK (lut_exp[0]=0xff)
+# UVM_INFO @ 0: reporter [RNTST] Running test tc_weights_loaded...
+# UVM_INFO ../testcases/tc_weights_loaded.sv(55) @ 88518895000: uvm_test_top [tc_weights_loaded] matrix 0: all 4096 words correct
+# UVM_INFO ../testcases/tc_weights_loaded.sv(55) @ 177037695000: uvm_test_top [tc_weights_loaded] matrix 1: all 4096 words correct
+# UVM_INFO ../testcases/tc_weights_loaded.sv(55) @ 265556495000: uvm_test_top [tc_weights_loaded] matrix 2: all 4096 words correct
+# UVM_INFO ../testcases/tc_weights_loaded.sv(55) @ 354075295000: uvm_test_top [tc_weights_loaded] matrix 3: all 4096 words correct
+# UVM_INFO ../testcases/tc_weights_loaded.sv(55) @ 442594095000: uvm_test_top [tc_weights_loaded] matrix 4: all 4096 words correct
+# UVM_INFO ../testcases/tc_weights_loaded.sv(55) @ 531112895000: uvm_test_top [tc_weights_loaded] matrix 5: all 4096 words correct
+# UVM_INFO ../testcases/tc_weights_loaded.sv(55) @ 619631695000: uvm_test_top [tc_weights_loaded] matrix 6: all 4096 words correct
+# UVM_INFO ../testcases/tc_weights_loaded.sv(55) @ 708150495000: uvm_test_top [tc_weights_loaded] matrix 7: all 4096 words correct
+# UVM_INFO verilog_src/uvm-1.1d/src/base/uvm_objection.svh(1267) @ 708150495000: reporter [TEST_DONE] 'run' phase is ready to proceed to the 'extract' phase
+# UVM_INFO ../env/tpu_env.sv(166) @ 708150495000: uvm_test_top.env.sb [tpu_scoreboard] 65568 byte(s) checked OK
+# 
+# --- UVM Report Summary ---
+# 
+# ** Report counts by severity
+# UVM_INFO :   11
+# UVM_WARNING :    0
+# UVM_ERROR :    0
+# UVM_FATAL :    0
+# ** Report counts by id
+# [RNTST]     1
+# [TEST_DONE]     1
+# [tc_weights_loaded]     8
+# [tpu_scoreboard]     1
+# ** Note: $finish    : G:/FPGA/questa_fse/win64/../verilog_src/uvm-1.1d/src/base/uvm_root.svh(430)
+#    Time: 708150495 ns  Iteration: 55  Instance: /tb_top
+# End time: 15:15:02 on Aug 05,2026, Elapsed time: 0:12:18
+# Errors: 0, Warnings: 0

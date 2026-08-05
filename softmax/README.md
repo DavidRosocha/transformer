@@ -193,23 +193,16 @@ The `softmax_sim/` folder contains the Vivado project. To open it on a new machi
 2. **File → Open Project** → select `softmax_sim/softmax_sim.xpr`
 3. The source files (`softmax_unit.sv`, both testbenches) should already be linked
 
-**Update the hardcoded paths** — there are two places with absolute Windows paths you need to change to match your machine:
+**Paths are relative — no editing needed.** They used to be absolute Windows paths; they are now derived automatically:
 
-**`softmax_unit.sv`** (lines 33–34) — the `$readmemh` paths:
-```systemverilog
-$readmemh("C:/Users/IsaiahK/.../luts/lut_exp.mem",     lut_exp);
-$readmemh("C:/Users/IsaiahK/.../luts/lut_2d_flat.mem", lut_2d_flat);
-```
+- **`softmax_unit.sv`** takes a `LUT_DIR` parameter, defaulting to `../../softmax/sim/luts`, i.e. relative to a simulator working directory of `verif/sim`. Override it at instantiation if you run from somewhere else:
+  ```systemverilog
+  softmax_unit #(.LUT_DIR("path/to/luts")) softmax ( ... );
+  ```
+- **`softmax_accuracy_tb.sv`** uses the same convention via its `SIM_DIR` localparam.
+- **`rtl_accuracy.py`**, **`softmax_accuracy.py`** and **`lut_gen.py`** derive their directories from `__file__`, so they work from any working directory.
 
-**`softmax_accuracy_tb.sv`** (lines 51, 103) — the input/output file paths:
-```systemverilog
-localparam string IN_FILE  = "C:/Users/IsaiahK/.../rtl_inputs.txt";
-localparam string OUT_FILE = "C:/Users/IsaiahK/.../rtl_outputs.txt";
-```
-
-**`rtl_accuracy.py`** and **`softmax_accuracy.py`** — the `SIM_DIR` / `--lut-dir` paths at the top of each file.
-
-> **Tip:** To avoid editing paths every time, in Vivado go to **Project Settings → Simulation** and add your `sim/luts/` folder to the simulation include directories. Then you can use bare filenames (`"lut_exp.mem"`) in `$readmemh` instead of absolute paths.
+> **Note:** the single copy of `softmax_unit.sv` lives in `hardware/modules/`. The old duplicate under `softmax/rtl/` was deleted so the two cannot drift apart.
 
 ### If you are on Linux/Mac
 

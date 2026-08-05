@@ -113,13 +113,94 @@ class uart_driver extends uvm_driver #(uart_item);
 endclass
 
 
-// Stub. Fills in once the driver is confirmed working on the waveform.
+// Watches vif.rx and rebuilds the bytes the driver put on it.
+//
+// The monitor is deliberately ignorant of the driver and the sequence -- it
+// only looks at the wire. If it asked the sequence what was sent, a driver
+// transmitting MSB-first would look correct and the bug would never surface.
+//
+// RX only for now. When the FPGA's replies need checking, this grows a second
+// thread doing the same thing on vif.tx with its own analysis port.
 class uart_monitor extends uvm_monitor;
   `uvm_component_utils(uart_monitor)
+
+  virtual uart_if vif;
+  const int CLKS_PER_BIT = 108;
+
+  // Two broadcast channels, one per direction. The scoreboard has to know
+  // which wire a byte came from -- a single port would mix the frame we sent
+  // with the frame the DUT sent back.
+  uvm_analysis_port #(uart_item) ap;      // serial_rx: PC -> FPGA
+  uvm_analysis_port #(uart_item) ap_tx;   // serial_tx: FPGA -> PC
 
   function new(string name, uvm_component parent);
     super.new(name, parent);
   endfunction
+
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+
+    // Analysis ports are plain objects -- new(), not the factory.
+    ap    = new("ap", this);
+    ap_tx = new("ap_tx", this);
+
+    if (!uvm_config_db #(virtual uart_if)::get(this, "", "vif", vif))
+      `uvm_fatal(get_type_name(), "no virtual interface found under name 'vif'")
+  endfunction
+
+  // Both directions run concurrently and independently for the whole sim.
+  virtual task run_phase(uvm_phase phase);
+    fork
+      watch_line(1'b0, ap);      // serial_rx
+      watch_line(1'b1, ap_tx);   // serial_tx
+    join
+  endtask
+
+  // One deserializer, told which wire to look at. The two directions have
+  // identical bit timing, so this is the same loop twice rather than two
+  // copies that could drift apart.
+  protected task watch_line(bit is_tx, uvm_analysis_port #(uart_item) port);
+    uart_item item;
+    bit [7:0] data;
+
+    forever begin
+      // Idle is high, so a falling edge is a candidate start bit.
+      if (is_tx) @(negedge vif.tx);
+      else       @(negedge vif.rx);
+
+      // Step to the MIDDLE of the start bit rather than its edge. Sampling at
+      // bit centres is what makes this tolerant of any skew between the
+      // transmitter's clock-counting and ours -- same trick uart_rx.v uses.
+      repeat (CLKS_PER_BIT / 2) @(posedge vif.clk);
+
+      if ((is_tx ? vif.tx : vif.rx) !== 1'b0) begin
+        `uvm_warning(get_type_name(),
+                     $sformatf("glitch on %s, not a real start bit",
+                               is_tx ? "tx" : "rx"))
+        continue;
+      end
+
+      // From here every bit centre is exactly CLKS_PER_BIT further on.
+      for (int i = 0; i < 8; i++) begin
+        repeat (CLKS_PER_BIT) @(posedge vif.clk);
+        data[i] = is_tx ? vif.tx : vif.rx;   // LSB first
+      end
+
+      repeat (CLKS_PER_BIT) @(posedge vif.clk);
+      if ((is_tx ? vif.tx : vif.rx) !== 1'b1)
+        `uvm_error(get_type_name(),
+                   $sformatf("framing error on %s: stop bit low after byte 0x%02h",
+                             is_tx ? "tx" : "rx", data))
+
+      item = uart_item::type_id::create("item");
+      item.data_byte = data;
+      port.write(item);                      // publish to every subscriber
+
+      `uvm_info(get_type_name(),
+                $sformatf("%s saw byte 0x%02h", is_tx ? "TX" : "RX", data),
+                UVM_HIGH)
+    end
+  endtask
 
 endclass
 

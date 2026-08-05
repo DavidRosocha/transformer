@@ -152,8 +152,9 @@ def evaluate(lut_dir, sigma_bits, ex_bits, n_trials, seed):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    # Relative to this script, so it works from any working directory.
     parser.add_argument("--lut-dir",
-        default=r"C:/Users/IsaiahK/Documents/School/FPGA/transformer/softmax/sim/luts")
+        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "luts"))
     parser.add_argument("--sigma-bits", type=int, default=4)
     parser.add_argument("--ex-bits",    type=int, default=4)
     parser.add_argument("--trials",     type=int, default=4000)

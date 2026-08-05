@@ -170,8 +170,9 @@ def main(out_dir, sigma_bits, ex_bits):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    # Relative to this script, so it works from any working directory.
     parser.add_argument("--out-dir",
-        default=r"C:\Users\IsaiahK\Documents\School\FPGA\transformer\softmax\sim\luts")
+        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "luts"))
     parser.add_argument("--sigma-bits", type=int, default=4,
         help="Log2 of number of sigma buckets (default 4 = 16 rows)")
     parser.add_argument("--ex-bits", type=int, default=4,

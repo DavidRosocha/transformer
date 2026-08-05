@@ -1,0 +1,1 @@
+G:/FPGA/questa_fse/win64/VisualizerRls/bin/viscom.exe -nolock -quiet -jmem_size 87048624 tb_top -o tb_opt +acc +__betafsm

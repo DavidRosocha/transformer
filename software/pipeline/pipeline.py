@@ -21,7 +21,7 @@ Weights must already be loaded onto the board (see load_weights.py) --
 this script only sends inputs, not weights.
 
 Usage:
-    python pipeline.py --port COM3 [--model ../model/model_sketch.pt] [--pattern heart]
+    python pipeline.py --port COM6 [--model ../model/model_sketch.pt] [--pattern heart]
 """
 
 import argparse
@@ -115,7 +115,7 @@ class PixelCompletionPipeline:
 
 def main():
     parser = argparse.ArgumentParser(description="Run one pixel-completion inference through the FPGA")
-    parser.add_argument("--port", required=True, help="Serial port, e.g. COM3")
+    parser.add_argument("--port", required=True, help="Serial port, e.g. COM6 -- find yours with: python -m serial.tools.list_ports -v")
     parser.add_argument("--baud", type=int, default=None, help="Override baud rate (default 921600)")
     parser.add_argument(
         "--model",

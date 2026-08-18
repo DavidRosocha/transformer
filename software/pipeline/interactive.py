@@ -25,7 +25,7 @@ round trip, so it looks/behaves the same as the real thing minus the
 hardware.
 
 Usage:
-    python interactive.py --port COM3 [--model ../model/model_sketch.pt] [--debounce-ms 500]
+    python interactive.py --port COM6 [--model ../model/model_sketch.pt] [--debounce-ms 500]
     python interactive.py --mock   (no board required, for previewing the GUI)
 """
 
@@ -234,7 +234,7 @@ class InteractiveApp:
 
 def main():
     parser = argparse.ArgumentParser(description="Interactive live pixel-completion demo")
-    parser.add_argument("--port", default=None, help="Serial port, e.g. COM3 (required unless --mock)")
+    parser.add_argument("--port", default=None, help="Serial port, e.g. COM6 -- find yours with: python -m serial.tools.list_ports -v (required unless --mock)")
     parser.add_argument("--baud", type=int, default=None, help="Override baud rate (default 921600)")
     parser.add_argument(
         "--model",

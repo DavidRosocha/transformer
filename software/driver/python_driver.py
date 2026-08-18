@@ -191,11 +191,11 @@ class FPGADriver:
     sending/receiving embedding matrices.
 
     Usage:
-        driver = FPGADriver(port='COM3')           # Windows
+        driver = FPGADriver(port='COM6')           # Windows
         driver = FPGADriver(port='/dev/ttyUSB0')   # Linux/Mac
 
         # As a context manager (recommended -- auto disconnects):
-        with FPGADriver(port='COM3') as driver:
+        with FPGADriver(port='COM6') as driver:
             result = driver.run_inference(embedding_matrix)
 
         # Or manually:
@@ -518,7 +518,7 @@ def run_conversion_test() -> bool:
 
 
 if __name__ == "__main__":
-    port = sys.argv[1] if len(sys.argv) > 1 else "COM3"
+    port = sys.argv[1] if len(sys.argv) > 1 else "COM6"
 
     print("=" * 40)
     print("  FPGA UART Driver Self-Test")

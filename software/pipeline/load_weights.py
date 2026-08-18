@@ -24,7 +24,7 @@ prescaling reproduces FPGAAttention.forward()'s float output to ~1e-7
 (pure float rounding noise), before any Q8.8 quantization.
 
 Usage:
-    python load_weights.py --port COM3 [--model ../model/model_sketch.pt]
+    python load_weights.py --port COM6 [--model ../model/model_sketch.pt]
 """
 
 import argparse
@@ -127,7 +127,7 @@ def report_ranges(weights: dict) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description="Load trained attention weights onto the FPGA")
-    parser.add_argument("--port", required=True, help="Serial port, e.g. COM3")
+    parser.add_argument("--port", required=True, help="Serial port, e.g. COM6 -- find yours with: python -m serial.tools.list_ports -v")
     parser.add_argument("--baud", type=int, default=None, help="Override baud rate (default 921600)")
     parser.add_argument(
         "--model",

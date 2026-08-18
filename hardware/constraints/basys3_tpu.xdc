@@ -3,7 +3,7 @@
 ## Board: Digilent Basys 3  |  Device: xc7a35tcpg236-1
 ##
 ## Signal names must match the port names in top.sv:
-##   clk, rst, uart_rx_pin, uart_tx_pin
+##   clk, rst, serial_rx, serial_tx
 ## =============================================================================
 
 ## -----------------------------------------------------------------------------
@@ -22,11 +22,11 @@ set_property -dict { PACKAGE_PIN U18  IOSTANDARD LVCMOS33 } [get_ports rst]
 ## USB-UART Interface (via onboard FTDI bridge to the micro-USB programming port)
 ##
 ## NOTE ON DIRECTION: these pin names are from the FPGA's perspective.
-##   B18 = data flowing INTO  the FPGA  -> connects to your uart_rx_pin
-##   A18 = data flowing OUT of the FPGA -> connects to your uart_tx_pin
+##   B18 = data flowing INTO  the FPGA  -> connects to your serial_rx
+##   A18 = data flowing OUT of the FPGA -> connects to your serial_tx
 ## -----------------------------------------------------------------------------
-set_property -dict { PACKAGE_PIN B18  IOSTANDARD LVCMOS33 } [get_ports uart_rx_pin]
-set_property -dict { PACKAGE_PIN A18  IOSTANDARD LVCMOS33 } [get_ports uart_tx_pin]
+set_property -dict { PACKAGE_PIN B18  IOSTANDARD LVCMOS33 } [get_ports serial_rx]
+set_property -dict { PACKAGE_PIN A18  IOSTANDARD LVCMOS33 } [get_ports serial_tx]
 
 ## -----------------------------------------------------------------------------
 ## Configuration options — recommended defaults for the Basys 3

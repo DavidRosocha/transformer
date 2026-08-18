@@ -8,7 +8,7 @@ un-drawn cell is simply an unlit LED, exactly what the sketch-completion
 model (model_sketch.pt) was trained on. You light up part of a shape and
 the model lights up the rest.
 
-A short idle timer (default 500ms after your last edit) fires a full
+A short idle timer (default 150ms after your last edit) fires a full
 pipeline.py inference through the real FPGA and lights up the predicted
 completion in the second grid. The debounce exists so a drag across many
 cells doesn't flood the board with UART traffic -- only the settled
@@ -25,7 +25,7 @@ round trip, so it looks/behaves the same as the real thing minus the
 hardware.
 
 Usage:
-    python interactive.py --port COM6 [--model ../model/model_sketch.pt] [--debounce-ms 500]
+    python interactive.py --port COM6 [--model ../model/model_sketch.pt] [--debounce-ms 150]
     python interactive.py --mock   (no board required, for previewing the GUI)
 """
 
@@ -235,13 +235,13 @@ class InteractiveApp:
 def main():
     parser = argparse.ArgumentParser(description="Interactive live pixel-completion demo")
     parser.add_argument("--port", default=None, help="Serial port, e.g. COM6 -- find yours with: python -m serial.tools.list_ports -v (required unless --mock)")
-    parser.add_argument("--baud", type=int, default=None, help="Override baud rate (default 921600)")
+    parser.add_argument("--baud", type=int, default=None, help="Override baud rate (default 4000000)")
     parser.add_argument(
         "--model",
         default=os.path.join(os.path.dirname(__file__), "..", "model", "model_sketch.pt"),
         help="Path to trained checkpoint (default: ../model/model_sketch.pt)",
     )
-    parser.add_argument("--debounce-ms", type=int, default=500,
+    parser.add_argument("--debounce-ms", type=int, default=150,
                          help="Idle time after your last edit before an inference runs (default 500)")
     parser.add_argument("--mock", action="store_true",
                          help="Skip the FPGA -- run predictions on the CPU to preview the GUI without a board")

@@ -63,7 +63,7 @@ import numpy as np
 #  CONSTANTS
 # ─────────────────────────────────────────────
 
-BAUD_RATE   = 921600
+BAUD_RATE   = 4000000
 MATRIX_ROWS = 16
 MATRIX_COLS = 64
 DATA_BYTES  = MATRIX_ROWS * MATRIX_COLS * 2   # 2048 bytes (Q8.8 = 2 bytes/value)

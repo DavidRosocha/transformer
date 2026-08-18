@@ -128,7 +128,7 @@ def report_ranges(weights: dict) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Load trained attention weights onto the FPGA")
     parser.add_argument("--port", required=True, help="Serial port, e.g. COM6 -- find yours with: python -m serial.tools.list_ports -v")
-    parser.add_argument("--baud", type=int, default=None, help="Override baud rate (default 921600)")
+    parser.add_argument("--baud", type=int, default=None, help="Override baud rate (default 4000000)")
     parser.add_argument(
         "--model",
         default=os.path.join(os.path.dirname(__file__), "..", "model", "model_sketch.pt"),

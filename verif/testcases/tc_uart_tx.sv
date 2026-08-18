@@ -16,7 +16,7 @@ class tc_uart_tx extends tpu_base_test;
     virtual weight_bkdr_if wbkdr;
 
     // Generous: the DUT runs seven matmuls plus softmax, then shifts 2050
-    // bytes back out at 921600 baud (~22 ms on its own).
+    // bytes back out at 4000000 baud (~5 ms on its own).
     const time RESULT_TIMEOUT = 100ms;
 
     function new(string name = "tc_uart_tx", uvm_component parent = null);

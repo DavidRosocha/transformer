@@ -112,7 +112,9 @@ DSPs are the binding constraint, exactly as designed — 64 in the array, zero e
 
 ## UART Protocol
 
-921,600 baud, 8N1. All matrix data is Q8.8, row-major, big-endian.
+4,000,000 baud, 8N1. All matrix data is Q8.8, row-major, big-endian.
+
+The rate is chosen so both ends divide exactly with zero error: the FT2232H derives baud from a 12 MHz clock (12 M / 3 = 4 M) and the FPGA from 100 MHz (100 M / 4 M = **25 clocks per bit**, integer). 6 M and 12 M are reachable by the bridge but land on 16.67 and 8.33 clocks per bit on the FPGA — a 4.17% rate error, which consumes too much of a 10-bit frame's timing budget. 2,000,000 is the next exact fallback (50 clocks per bit) if signal integrity ever becomes the limit.
 
 ```
 PC → FPGA:   [0xAA] [TYPE] [payload] [XOR checksum] [0x55]
@@ -165,6 +167,8 @@ software/
 
 softmax/                    softmax LUT generation, Python model, testbenches
 verif/                      UVM environment and testcases
+docs/
+  OBSTACLES.md              design challenges, failures, and what fixed them
 ```
 
 ---
@@ -238,10 +242,15 @@ Run with `verif/sim/run.do`. The softmax unit additionally has standalone testbe
 
 ## Known Limitations
 
+> For the problems hit along the way — the silent constraint failure, the three-port BRAM surprise, the baud-rate arithmetic, and the 16 ms driver setting that turned out to matter more than any of it — see [`docs/OBSTACLES.md`](docs/OBSTACLES.md).
+
 - **`W_q` quantization.** Because the `1/√64` scale is pre-baked into `W_q`, those weights span only ±0.045 — about 11 Q8.8 quantization levels, roughly 4 effective bits. Every other matrix spans ±0.3 (~90 levels). This is the first place to look if hardware output drifts from the CPU reference. Folding the scale elsewhere, or storing `W_q` at a different fixed-point scale, would recover the precision.
 - **Tile controller `ACCUMULATE` state** burns 63 idle cycles per tile, doing real work only on the first. Correctness-first choice; a real latency win is available here.
 - **Single head, fixed dimensions.** 64×64 weights and exactly 2 layers are hardcoded in `attention_fsm.sv` and `weight_bram.sv`. The host scripts check the checkpoint's shape and refuse a mismatch rather than producing garbage.
-- **No flow control.** The design relies on the FPGA consuming bytes faster than they arrive at 921,600 baud, which holds comfortably at 100 MHz but leaves no margin at higher rates.
+- **No flow control.** The design relies on the FPGA consuming bytes faster than they arrive. At 4 Mbaud a byte lands every 250 clocks and the receive path does one BRAM write per byte pair, so the margin is large — but there is no backpressure if that ever stops being true.
+- **UART dominates latency.** Measured round trip is **12.0 ms per layer** (24.0 ms per inference), of which 10.3 ms is wire time — leaving under 1 ms for all seven matmuls and the softmax. The accelerator is not the bottleneck; the link is. Further gains have to come from moving fewer bytes, not from a faster array.
+
+- **Set the FTDI latency timer to 1 ms** — required to get the numbers above. The FT2232H holds received bytes until either 62 accumulate or a latency timer expires, and that timer defaults to **16 ms**. A 2,050-byte result frame is 33 full USB packets plus a 4-byte remainder, and that remainder waits out the full timer on *every* round trip, regardless of baud. Fix it in Device Manager → Ports → USB Serial Port → Properties → Port Settings → Advanced → **Latency Timer (msec) = 1**, then replug. Measured effect: 27.3 → 12.0 ms per layer, a **2.3× improvement** that no amount of baud rate would have bought.
 
 ---
 

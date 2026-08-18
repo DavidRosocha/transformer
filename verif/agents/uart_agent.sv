@@ -65,9 +65,9 @@ class uart_driver extends uvm_driver #(uart_item);
   // interface; a class cannot hold a real one.
   virtual uart_if vif;
 
-  // 100 MHz / 921600 baud = 108 clocks per bit, matching the CLKS_PER_BIT
+  // 100 MHz / 4000000 baud = 25 clocks per bit, matching the CLKS_PER_BIT
   // localparam inside uart_rx.v.
-  const int CLKS_PER_BIT = 108;
+  const int CLKS_PER_BIT = 25;
 
   function new(string name, uvm_component parent);
     super.new(name, parent);
@@ -125,7 +125,7 @@ class uart_monitor extends uvm_monitor;
   `uvm_component_utils(uart_monitor)
 
   virtual uart_if vif;
-  const int CLKS_PER_BIT = 108;
+  const int CLKS_PER_BIT = 25;
 
   // Two broadcast channels, one per direction. The scoreboard has to know
   // which wire a byte came from -- a single port would mix the frame we sent

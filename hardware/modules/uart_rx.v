@@ -1,6 +1,6 @@
 module uart_rx #(
     parameter CLK_FREQ  = 100_000_000,
-    parameter BAUD_RATE = 921_600
+    parameter BAUD_RATE = 4_000_000
 )(
     input  wire clk,
     input  wire rst,
@@ -8,7 +8,7 @@ module uart_rx #(
     output reg  [7:0] data,
     output reg  valid
 );
-    localparam CLKS_PER_BIT = CLK_FREQ / BAUD_RATE;  // 108
+    localparam CLKS_PER_BIT = CLK_FREQ / BAUD_RATE;  // 25
 
     localparam IDLE  = 2'd0;
     localparam START = 2'd1;

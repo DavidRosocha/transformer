@@ -67,13 +67,7 @@ endpackage
 // =============================================================================
 module softmax_unit
     import softmax_pkg::*;
-#(
-    // Where the generated LUT .mem files live. $readmemh resolves relative
-    // paths against the simulator's working directory, so this default assumes
-    // you are running from verif/sim. Override it from the instantiating module
-    // if you run from somewhere else (e.g. a Vivado project directory).
-    parameter string LUT_DIR = "../../softmax/sim/luts"
-)(
+(
     input  logic                         clk,
     input  logic                         rst_n,
     input  logic                         in_valid,
@@ -85,18 +79,31 @@ module softmax_unit
 );
 
     // ── LUT memories ─────────────────────────────────────────────────────────
-    // Paths come from the LUT_DIR parameter above, not hardcoded.
+    // Bare filenames, no directory component. Vivado resolves these against the
+    // paths of files added to the project as design sources, so adding
+    // softmax/sim/luts/*.mem to the project is enough for both synthesis and
+    // xsim. For a command-line xsim/xelab flow, either copy the .mem files into
+    // the run directory or pass their directory with xelab's --include.
     logic [OUT_WIDTH-1:0] lut_exp     [0:LUT_EX_DEPTH-1];
     logic [OUT_WIDTH-1:0] lut_2d_flat [0:LUT_2D_FLAT-1];
 
     initial begin
-        $readmemh({LUT_DIR, "/lut_exp.mem"},     lut_exp);
-        $readmemh({LUT_DIR, "/lut_2d_flat.mem"}, lut_2d_flat);
+        $readmemh("lut_exp.mem",     lut_exp);
+        $readmemh("lut_2d_flat.mem", lut_2d_flat);
+    end
+
+    // Load check is simulation-only: $display and === are ignored by synthesis,
+    // and keeping them out of the $readmemh initial block avoids any chance of
+    // Vivado discarding the whole block along with the unsupported tasks.
+`ifndef SYNTHESIS
+    initial begin
+        #0;
         if (lut_exp[0] === 8'hFF)
             $display("[softmax] LUTs loaded OK (lut_exp[0]=0x%02X)", lut_exp[0]);
         else
             $display("[softmax] WARNING: LUT load may have failed (lut_exp[0]=0x%02X) -- check $readmemh path", lut_exp[0]);
     end
+`endif
 
     // ── Internal buffers ─────────────────────────────────────────────────────
     logic signed [DATA_WIDTH-1:0] row_buf [0:SEQ_LEN-1];  // captured input tokens
